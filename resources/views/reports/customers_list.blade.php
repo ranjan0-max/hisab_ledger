@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Customer Directory Report</title>
+    <style>
+        @page {
+            margin: 25px 30px;
+        }
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            font-size: 10px;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 8px;
+        }
+        .company-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4f46e5;
+            text-transform: uppercase;
+        }
+        .report-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #0f172a;
+            text-align: right;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .table th {
+            background-color: #4f46e5;
+            color: #ffffff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 8.5px;
+            padding: 6px 8px;
+            border: 1px solid #4f46e5;
+            text-align: left;
+        }
+        .table th.text-right {
+            text-align: right;
+        }
+        .table td {
+            padding: 5px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 9px;
+            text-align: left;
+        }
+        .table td.text-right {
+            text-align: right;
+        }
+        .table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .text-left { text-align: left !important; }
+        .text-right { text-align: right !important; }
+        .text-center { text-align: center !important; }
+        .fw-bold { font-weight: bold; }
+        .text-success { color: #16a34a; }
+        .text-danger { color: #dc2626; }
+        .text-muted { color: #64748b; }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 8.5px;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="company-title">{{ auth()->user()->client->name ?? config('app.name', 'Hisab Ledger') }}</div>
+                <div class="text-muted" style="font-size: 9px;">
+                    @if(!empty($inactiveMonths))
+                        Inactive Customers Report (No tx in last {{ $inactiveMonths }} {{ $inactiveMonths == 1 ? 'month' : 'months' }} + Pending Balance)
+                    @else
+                        Customer Directory & Balance Report
+                    @endif
+                </div>
+            </td>
+            <td class="report-title">
+                CUSTOMERS DIRECTORY
+                <div class="text-muted" style="font-size: 9px; font-weight: normal;">Generated on: {{ now()->format('d M Y, h:i A') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width: 12%; text-align: left;">Khata No</th>
+                <th style="width: 25%; text-align: left;">Customer Name</th>
+                <th style="width: 20%; text-align: left;">Mobile Number</th>
+                <th style="width: 23%; text-align: left;">Address</th>
+                <th style="width: 20%; text-align: right;">Current Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($exportContacts as $contact)
+                <tr>
+                    <td class="fw-bold">#{{ $contact->khata_number }}</td>
+                    <td class="fw-bold">{{ $contact->name }}</td>
+                    <td>{{ $contact->phoneNumbers->first()->phone_number ?? '—' }}</td>
+                    <td>{{ $contact->address ?? '—' }}</td>
+                    <td class="text-right fw-bold">
+                        @if($contact->current_balance < 0)
+                            <span class="text-success">Rs. {{ number_format(abs($contact->current_balance), 2) }} (ADV)</span>
+                        @elseif($contact->current_balance > 0)
+                            <span class="text-danger">Rs. {{ number_format($contact->current_balance, 2) }} (DUE)</span>
+                        @else
+                            <span class="text-muted">Rs. 0.00</span>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5" class="text-center text-muted" style="padding: 15px;">No customers found.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Total Customers Listed: {{ count($exportContacts) }} | Generated by {{ config('app.name', 'Hisab Ledger') }}
+    </div>
+</body>
+</html>
