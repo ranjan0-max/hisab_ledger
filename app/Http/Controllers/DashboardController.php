@@ -38,44 +38,23 @@ class DashboardController extends Controller
         $recentTransactions = collect();
 
         if ($clientId || !$user->isSuperAdmin()) {
-            $stats['totalCustomers'] = Contact::where('client_id', $clientId)->where('type', 'REGULAR_CUSTOMER')->count();
-            $stats['totalSuppliers'] = Contact::where('client_id', $clientId)->where('type', 'SUPPLIER')->count();
+            $stats['totalCustomers'] = Contact::where('contacts.type', 'REGULAR_CUSTOMER')->count();
+            $stats['totalSuppliers'] = Contact::where('contacts.type', 'SUPPLIER')->count();
             
-            // Calculate Customer Total Receivables (Opening Balances + SALE/CASH_GIVEN - CUSTOMER_PAYMENT)
-            $customerContacts = Contact::where('client_id', $clientId)->where('type', 'REGULAR_CUSTOMER')->get();
-            $ledgerService = app(\App\Services\LedgerService::class);
-            
-            $totalCustomerDue = 0;
-            foreach ($customerContacts as $c) {
-                $txs = $ledgerService->getTransactionsWithBalance($c);
-                $bal = $txs->isNotEmpty() 
-                    ? $txs->last()->running_balance 
-                    : ($c->opening_balance_type === 'ADVANCE' ? -$c->opening_balance : $c->opening_balance);
-                
-                if ($bal > 0) {
-                    $totalCustomerDue += $bal;
-                }
-            }
-            $stats['totalCustomerDue'] = $totalCustomerDue;
+            // Calculate Customer Total Receivables using fast SQL aggregation
+            $customerBalances = Contact::where('contacts.type', 'REGULAR_CUSTOMER')
+                ->withCurrentBalance()
+                ->get();
+            $stats['totalCustomerDue'] = (float) $customerBalances->where('current_balance', '>', 0)->sum('current_balance');
 
-            // Calculate Supplier Total Payables
-            $supplierContacts = Contact::where('client_id', $clientId)->where('type', 'SUPPLIER')->get();
-            $totalSupplierDue = 0;
-            foreach ($supplierContacts as $s) {
-                $txs = $ledgerService->getTransactionsWithBalance($s);
-                $bal = $txs->isNotEmpty() 
-                    ? $txs->last()->running_balance 
-                    : ($s->opening_balance_type === 'ADVANCE' ? -$s->opening_balance : $s->opening_balance);
-                
-                if ($bal > 0) {
-                    $totalSupplierDue += $bal;
-                }
-            }
-            $stats['totalSupplierDue'] = $totalSupplierDue;
+            // Calculate Supplier Total Payables using fast SQL aggregation
+            $supplierBalances = Contact::where('contacts.type', 'SUPPLIER')
+                ->withCurrentBalance()
+                ->get();
+            $stats['totalSupplierDue'] = (float) $supplierBalances->where('current_balance', '>', 0)->sum('current_balance');
 
             // Daily Entries Analytics (Unpaid/Partial active bills)
-            $pendingEntries = DailyEntry::where('client_id', $clientId)
-                ->where('status', 'POSTED');
+            $pendingEntries = DailyEntry::where('daily_entries.status', 'POSTED');
 
             $stats['pendingDailyCount']  = (clone $pendingEntries)->count();
             $stats['pendingDailyAmount'] = (clone $pendingEntries)->sum('remaining_amount');
@@ -84,12 +63,10 @@ class DashboardController extends Controller
             $stats['totalReceivable'] = $stats['totalCustomerDue'] + $stats['pendingDailyAmount'];
 
             // Today's total counter sales
-            $stats['todaysSalesAmount'] = DailyEntry::where('client_id', $clientId)
-                ->whereDate('entry_date', today())
-                ->sum('total_amount');
+            $stats['todaysSalesAmount'] = DailyEntry::whereDate('entry_date', today())->sum('total_amount');
 
             $recentTransactions = LedgerTransaction::with('contact')
-                ->where('client_id', $clientId)
+                ->where('ledger_transactions.status', 'POSTED')
                 ->latest()
                 ->take(8)
                 ->get();
@@ -100,9 +77,7 @@ class DashboardController extends Controller
 
     public function switchClient(Request $request)
     {
-        if (auth()->user()->isSuperAdmin()) {
-            session(['active_client_id' => $request->get('client_id')]);
-        }
+        session(['active_client_id' => $request->get('client_id')]);
         return redirect()->back()->with('success', 'Active shop switched successfully.');
     }
 }

@@ -1,8 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToClient;
+
 class LedgerTransaction extends Model
 {
+    use BelongsToClient;
     protected $table = 'ledger_transactions';
     protected $fillable = [
         'client_id', 'contact_id', 'transaction_type', 'amount',

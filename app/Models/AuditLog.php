@@ -1,8 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToClient;
+
 class AuditLog extends Model
 {
+    use BelongsToClient;
     protected $table = 'audit_logs';
     protected $fillable = [
         'client_id', 'user_id', 'action', 'entity_type',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Contact;
 use App\Models\ContactPhoneNumber;
+use App\Models\LedgerTransaction;
 use App\Services\LedgerService;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -30,17 +31,13 @@ class ContactController extends Controller
     private function index(Request $request, string $type)
     {
         $user = auth()->user();
-        $query = Contact::with('phoneNumbers')->where('type', $type);
-
-        if (!$user->isSuperAdmin()) {
-            $query->where('client_id', $user->client_id);
-        }
+        $query = Contact::with('phoneNumbers')->where('contacts.type', $type);
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('khata_number', 'like', "%{$search}%")
+                $q->where('contacts.name', 'like', "%{$search}%")
+                  ->orWhere('contacts.khata_number', 'like', "%{$search}%")
                   ->orWhereHas('phoneNumbers', function($pq) use ($search) {
                       $pq->where('phone_number', 'like', "%{$search}%");
                   });
@@ -51,82 +48,34 @@ class ContactController extends Controller
 
         // Check if PDF Export is requested
         if ($request->get('export') === 'pdf') {
-            $exportContacts = $query->latest()->get();
-            $exportContacts = $exportContacts->filter(function($contact) use ($inactiveMonths) {
-                $transactions = $this->ledgerService->getTransactionsWithBalance($contact);
-                $contact->current_balance = $transactions->isNotEmpty() 
-                    ? $transactions->last()->running_balance 
-                    : ($contact->opening_balance_type === 'ADVANCE' ? -$contact->opening_balance : $contact->opening_balance);
-
-                // Filter condition: Must have DUE balance (> 0)
-                if ($contact->current_balance <= 0) {
-                    return false;
-                }
-
-                // Inactive Months condition: No transaction in the last X months
-                if ($inactiveMonths) {
-                    $cutoffDate = \Carbon\Carbon::now()->subMonths((int)$inactiveMonths);
-                    $hasRecentTx = $contact->transactions()
-                        ->where('status', 'POSTED')
-                        ->where('transaction_date', '>=', $cutoffDate->format('Y-m-d'))
-                        ->exists();
-
-                    if ($hasRecentTx) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
+            $exportQuery = (clone $query)->withCurrentBalance();
+            if ($inactiveMonths) {
+                $cutoffDate = \Carbon\Carbon::now()->subMonths((int)$inactiveMonths)->format('Y-m-d');
+                $exportQuery->having('current_balance', '>', 0)
+                    ->whereDoesntHave('transactions', function($tq) use ($cutoffDate) {
+                        $tq->where('status', 'POSTED')
+                           ->where('transaction_date', '>=', $cutoffDate);
+                    });
+            }
+            $exportContacts = $exportQuery->latest('contacts.id')->get();
 
             $pdf = Pdf::loadView('reports.customers_list', compact('exportContacts', 'type', 'inactiveMonths'));
-            return $pdf->download("Inactive_Due_Customers_" . date('Y-m-d') . ".pdf");
+            $fileName = ($type === 'REGULAR_CUSTOMER' ? "Customers_List_" : "Suppliers_List_") . date('Y-m-d') . ".pdf";
+            return $pdf->download($fileName);
         }
 
-        $allContacts = $query->latest()->get();
-        $filteredContacts = $allContacts->filter(function($contact) use ($inactiveMonths) {
-            $transactions = $this->ledgerService->getTransactionsWithBalance($contact);
-            $contact->current_balance = $transactions->isNotEmpty() 
-                ? $transactions->last()->running_balance 
-                : ($contact->opening_balance_type === 'ADVANCE' ? -$contact->opening_balance : $contact->opening_balance);
+        $query->withCurrentBalance();
 
-            if ($inactiveMonths) {
-                // Must have DUE balance (> 0)
-                if ($contact->current_balance <= 0) {
-                    return false;
-                }
-
-                $cutoffDate = \Carbon\Carbon::now()->subMonths((int)$inactiveMonths);
-                $hasRecentTx = $contact->transactions()
-                    ->where('status', 'POSTED')
-                    ->where('transaction_date', '>=', $cutoffDate->format('Y-m-d'))
-                    ->exists();
-
-                if ($hasRecentTx) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage() ?: 1;
-        $perPage = 10;
-        $contacts = new \Illuminate\Pagination\LengthAwarePaginator(
-            $filteredContacts->forPage($page, $perPage)->values(),
-            $filteredContacts->count(),
-            $perPage,
-            $page,
-            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
-        );
-
-        // Calculate current running balance for each contact
-        foreach ($contacts as $contact) {
-            $transactions = $this->ledgerService->getTransactionsWithBalance($contact);
-            $contact->current_balance = $transactions->isNotEmpty() 
-                ? $transactions->last()->running_balance 
-                : ($contact->opening_balance_type === 'ADVANCE' ? -$contact->opening_balance : $contact->opening_balance);
+        if ($inactiveMonths) {
+            $cutoffDate = \Carbon\Carbon::now()->subMonths((int)$inactiveMonths)->format('Y-m-d');
+            $query->having('current_balance', '>', 0)
+                ->whereDoesntHave('transactions', function($tq) use ($cutoffDate) {
+                    $tq->where('status', 'POSTED')
+                       ->where('transaction_date', '>=', $cutoffDate);
+                });
         }
+
+        $contacts = $query->latest('contacts.id')->paginate(10)->withQueryString();
 
         $view = $type === 'REGULAR_CUSTOMER' ? 'customers.index' : 'suppliers.index';
 
@@ -141,11 +90,36 @@ class ContactController extends Controller
         }
 
         $contact->load('phoneNumbers');
-        $transactions = $this->ledgerService->getTransactionsWithBalance($contact);
-        
+
+        // Plain transaction fetch — no PHP loop, no running_balance per row
+        $transactions = LedgerTransaction::where('contact_id', $contact->id)
+            ->where('status', 'POSTED')
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Current balance via single SQL aggregate — no PHP loop needed
+        $openingBalance = $contact->opening_balance_type === 'ADVANCE'
+            ? -(float) $contact->opening_balance
+            : (float) $contact->opening_balance;
+
+        if ($contact->type === 'REGULAR_CUSTOMER') {
+            $txSum = LedgerTransaction::where('contact_id', $contact->id)
+                ->where('status', 'POSTED')
+                ->selectRaw("SUM(CASE WHEN transaction_type IN ('SALE','CASH_GIVEN','ADJUSTMENT') THEN amount WHEN transaction_type = 'CUSTOMER_PAYMENT' THEN -amount ELSE 0 END) as net")
+                ->value('net') ?? 0;
+        } else {
+            $txSum = LedgerTransaction::where('contact_id', $contact->id)
+                ->where('status', 'POSTED')
+                ->selectRaw("SUM(CASE WHEN transaction_type IN ('PURCHASE','ADJUSTMENT') THEN amount WHEN transaction_type = 'SUPPLIER_PAYMENT' THEN -amount ELSE 0 END) as net")
+                ->value('net') ?? 0;
+        }
+
+        $currentBalance = $openingBalance + (float) $txSum;
+
         $view = $contact->type === 'REGULAR_CUSTOMER' ? 'customers.show' : 'suppliers.show';
 
-        return view($view, compact('contact', 'transactions'));
+        return view($view, compact('contact', 'transactions', 'currentBalance'));
     }
 
     public function store(Request $request)
@@ -167,19 +141,17 @@ class ContactController extends Controller
 
         $clientId = $user->isSuperAdmin() ? $validated['client_id'] : $user->client_id;
 
-        // Custom Validation Rule from Next.js: Active Customer Khata Number uniqueness check
-        if ($validated['type'] === 'REGULAR_CUSTOMER') {
-            $existingCustomer = Contact::where('client_id', $clientId)
-                ->where('type', 'REGULAR_CUSTOMER')
-                ->where('is_active', true)
-                ->where('khata_number', trim($validated['khata_number']))
-                ->first();
+        // Custom Validation Rule: Active Party (Customer/Supplier) Khata Number uniqueness check
+        $existingParty = Contact::where('contacts.type', $validated['type'])
+            ->where('contacts.is_active', true)
+            ->where('contacts.khata_number', trim($validated['khata_number']))
+            ->first();
 
-            if ($existingCustomer) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', "Khata Number {$validated['khata_number']} is already assigned to active customer \"{$existingCustomer->name}\". Deactivate that customer or use a different Khata Number.");
-            }
+        if ($existingParty) {
+            $partyLabel = $validated['type'] === 'REGULAR_CUSTOMER' ? 'customer' : 'supplier';
+            return redirect()->back()
+                ->withInput()
+                ->with('error', "Khata Number {$validated['khata_number']} is already assigned to active {$partyLabel} \"{$existingParty->name}\". Deactivate that {$partyLabel} or use a different Khata Number.");
         }
 
         $contact = Contact::create([
@@ -228,19 +200,19 @@ class ContactController extends Controller
 
         $isActive = $request->has('is_active');
 
-        // Custom Validation Rule from Next.js: Active Customer Khata Number uniqueness check
-        if ($contact->type === 'REGULAR_CUSTOMER' && $isActive) {
-            $existingCustomer = Contact::where('client_id', $contact->client_id)
-                ->where('type', 'REGULAR_CUSTOMER')
-                ->where('is_active', true)
-                ->where('khata_number', trim($validated['khata_number']))
-                ->where('id', '!=', $contact->id)
+        // Custom Validation Rule: Active Party (Customer/Supplier) Khata Number uniqueness check
+        if ($isActive) {
+            $existingParty = Contact::where('contacts.type', $contact->type)
+                ->where('contacts.is_active', true)
+                ->where('contacts.khata_number', trim($validated['khata_number']))
+                ->where('contacts.id', '!=', $contact->id)
                 ->first();
 
-            if ($existingCustomer) {
+            if ($existingParty) {
+                $partyLabel = $contact->type === 'REGULAR_CUSTOMER' ? 'customer' : 'supplier';
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', "Khata Number {$validated['khata_number']} is already assigned to active customer \"{$existingCustomer->name}\". Deactivate that customer or use a different Khata Number.");
+                    ->with('error', "Khata Number {$validated['khata_number']} is already assigned to active {$partyLabel} \"{$existingParty->name}\". Deactivate that {$partyLabel} or use a different Khata Number.");
             }
         }
 
@@ -279,29 +251,53 @@ class ContactController extends Controller
         }
 
         $fromDate = $request->get('from_date');
-        $toDate = $request->get('to_date');
+        $toDate   = $request->get('to_date');
 
-        $allTransactions = $this->ledgerService->getTransactionsWithBalance($contact);
-        
-        $currentBalance = $allTransactions->isNotEmpty() 
-            ? $allTransactions->last()->running_balance 
-            : ($contact->opening_balance_type === 'ADVANCE' ? -$contact->opening_balance : $contact->opening_balance);
+        // Opening balance base
+        $openingBalance = $contact->opening_balance_type === 'ADVANCE'
+            ? -(float) $contact->opening_balance
+            : (float) $contact->opening_balance;
 
-        $transactions = $allTransactions;
-
+        // Prior period sum (before fromDate) — only if date filter set
         if ($fromDate) {
-            $transactions = $transactions->filter(function($tx) use ($fromDate) {
-                return \Carbon\Carbon::parse($tx->transaction_date)->format('Y-m-d') >= $fromDate;
-            });
+            $priorQuery = $contact->transactions()->where('status', 'POSTED')->where('transaction_date', '<', $fromDate);
+            if ($contact->type === 'REGULAR_CUSTOMER') {
+                $priorSum = $priorQuery->selectRaw("SUM(CASE WHEN transaction_type IN ('SALE','CASH_GIVEN','ADJUSTMENT') THEN amount WHEN transaction_type = 'CUSTOMER_PAYMENT' THEN -amount ELSE 0 END) as total")->value('total') ?? 0;
+            } else {
+                $priorSum = $priorQuery->selectRaw("SUM(CASE WHEN transaction_type IN ('PURCHASE','ADJUSTMENT') THEN amount WHEN transaction_type = 'SUPPLIER_PAYMENT' THEN -amount ELSE 0 END) as total")->value('total') ?? 0;
+            }
+            $openingBalance += (float) $priorSum;
         }
 
-        if ($toDate) {
-            $transactions = $transactions->filter(function($tx) use ($toDate) {
-                return \Carbon\Carbon::parse($tx->transaction_date)->format('Y-m-d') <= $toDate;
-            });
+        // Plain transactions fetch — no running_balance loop needed
+        $transactions = $contact->transactions()
+            ->where('status', 'POSTED')
+            ->when($fromDate, fn($q) => $q->where('transaction_date', '>=', $fromDate))
+            ->when($toDate,   fn($q) => $q->where('transaction_date', '<=', $toDate))
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Current balance via single SQL aggregate — no PHP loop at all
+        if ($contact->type === 'REGULAR_CUSTOMER') {
+            $rangeSum = $contact->transactions()
+                ->where('status', 'POSTED')
+                ->when($fromDate, fn($q) => $q->where('transaction_date', '>=', $fromDate))
+                ->when($toDate,   fn($q) => $q->where('transaction_date', '<=', $toDate))
+                ->selectRaw("SUM(CASE WHEN transaction_type IN ('SALE','CASH_GIVEN','ADJUSTMENT') THEN amount WHEN transaction_type = 'CUSTOMER_PAYMENT' THEN -amount ELSE 0 END) as net")
+                ->value('net') ?? 0;
+        } else {
+            $rangeSum = $contact->transactions()
+                ->where('status', 'POSTED')
+                ->when($fromDate, fn($q) => $q->where('transaction_date', '>=', $fromDate))
+                ->when($toDate,   fn($q) => $q->where('transaction_date', '<=', $toDate))
+                ->selectRaw("SUM(CASE WHEN transaction_type IN ('PURCHASE','ADJUSTMENT') THEN amount WHEN transaction_type = 'SUPPLIER_PAYMENT' THEN -amount ELSE 0 END) as net")
+                ->value('net') ?? 0;
         }
 
-        $pdf = Pdf::loadView('reports.statement', compact('contact', 'transactions', 'fromDate', 'toDate', 'currentBalance'));
+        $currentBalance = $openingBalance + (float) $rangeSum;
+
+        $pdf = Pdf::loadView('reports.statement', compact('contact', 'transactions', 'fromDate', 'toDate', 'currentBalance', 'openingBalance'));
 
         return $pdf->download("Statement_{$contact->name}_{$contact->khata_number}.pdf");
     }

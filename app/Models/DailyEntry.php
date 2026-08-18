@@ -1,8 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToClient;
+
 class DailyEntry extends Model
 {
+    use BelongsToClient;
     protected $table = 'daily_entries';
     protected $fillable = [
         'client_id', 'customer_name', 'mobile_number', 'description', 'total_amount',

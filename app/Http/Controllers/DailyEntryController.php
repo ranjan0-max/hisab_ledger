@@ -10,11 +10,7 @@ class DailyEntryController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = DailyEntry::with(['createdBy', 'payments'])->where('status', 'POSTED');
-
-        if (!$user->isSuperAdmin()) {
-            $query->where('client_id', $user->client_id);
-        }
+        $query = DailyEntry::with(['createdBy', 'payments'])->where('daily_entries.status', 'POSTED');
 
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);

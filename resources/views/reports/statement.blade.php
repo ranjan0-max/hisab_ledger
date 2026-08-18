@@ -163,10 +163,9 @@
         <thead>
             <tr>
                 <th class="text-left" style="width: 15%;">Date</th>
-                <th class="text-left" style="width: 15%;">Type</th>
-                <th class="text-left" style="width: 40%;">Description</th>
-                <th class="text-right" style="width: 15%;">Amount</th>
-                <th class="text-right" style="width: 15%;">Balance</th>
+                <th class="text-left" style="width: 18%;">Type</th>
+                <th class="text-left" style="width: 47%;">Description</th>
+                <th class="text-right" style="width: 20%;">Amount</th>
             </tr>
         </thead>
         <tbody>
@@ -177,16 +176,13 @@
                         <span class="fw-bold">{{ $tx->transaction_type }}</span>
                     </td>
                     <td>{{ $tx->description ?? '—' }}</td>
-                    <td class="text-right fw-bold {{ in_array($tx->transaction_type, ['PAYMENT', 'SALE']) ? 'text-success' : 'text-danger' }}">
+                    <td class="text-right fw-bold {{ in_array($tx->transaction_type, ['CUSTOMER_PAYMENT','SUPPLIER_PAYMENT']) ? 'text-success' : 'text-danger' }}">
                         Rs. {{ number_format($tx->amount, 2) }}
-                    </td>
-                    <td class="text-right fw-bold">
-                        Rs. {{ number_format($tx->running_balance, 2) }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="text-center text-muted" style="padding: 20px;">No transactions recorded yet.</td>
+                    <td colspan="4" class="text-center text-muted" style="padding: 20px;">No transactions recorded yet.</td>
                 </tr>
             @endforelse
         </tbody>

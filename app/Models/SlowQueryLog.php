@@ -1,8 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToClient;
+
 class SlowQueryLog extends Model
 {
+    use BelongsToClient;
     protected $table = 'slow_query_logs';
     public $timestamps = false;
     protected $fillable = [

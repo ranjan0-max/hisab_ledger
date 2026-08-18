@@ -45,6 +45,9 @@
                             <th>GST Number</th>
                             <th>Address</th>
                             <th>Status</th>
+                            @if(auth()->user()->isSuperAdmin())
+                                <th class="text-center">Session Timeout</th>
+                            @endif
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -62,6 +65,14 @@
                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Inactive</span>
                                     @endif
                                 </td>
+                                @if(auth()->user()->isSuperAdmin())
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ $client->session_timeout_minutes ?? 120 }} min
+                                        </span>
+                                    </td>
+                                @endif
                                 <td class="text-end">
                                     @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('clients.manage'))
                                         <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editClientModal{{ $client->id }}">
@@ -174,6 +185,21 @@
                         <input class="form-check-input" type="checkbox" name="is_active" value="1" id="addActive" checked>
                         <label class="form-check-label" for="addActive">Active</label>
                     </div>
+
+                    @if(auth()->user()->isSuperAdmin())
+                    {{-- SuperAdmin only: Session timeout setting --}}
+                    <div class="mb-0 mt-3 p-3 rounded border border-warning-subtle bg-warning-subtle">
+                        <label class="form-label fw-bold text-warning-emphasis mb-1">
+                            <i class="bi bi-shield-lock me-1"></i> Session Timeout (SuperAdmin Only)
+                        </label>
+                        <div class="input-group">
+                            <input type="number" name="session_timeout_minutes" class="form-control"
+                                   value="120" min="5" max="1440" placeholder="120">
+                            <span class="input-group-text">minutes</span>
+                        </div>
+                        <small class="text-muted">Min: 5 min &bull; Max: 1440 min (24 hours) &bull; Default: 120 min</small>
+                    </div>
+                    @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -268,6 +294,22 @@
                         <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editActive{{ $client->id }}" {{ $client->is_active ? 'checked' : '' }}>
                         <label class="form-check-label" for="editActive{{ $client->id }}">Active</label>
                     </div>
+
+                    @if(auth()->user()->isSuperAdmin())
+                    {{-- SuperAdmin only: per-client session timeout --}}
+                    <div class="mb-0 mt-3 p-3 rounded border border-warning-subtle bg-warning-subtle">
+                        <label class="form-label fw-bold text-warning-emphasis mb-1">
+                            <i class="bi bi-shield-lock me-1"></i> Session Timeout (SuperAdmin Only)
+                        </label>
+                        <div class="input-group">
+                            <input type="number" name="session_timeout_minutes" class="form-control"
+                                   value="{{ $client->session_timeout_minutes ?? 120 }}"
+                                   min="5" max="1440">
+                            <span class="input-group-text">minutes</span>
+                        </div>
+                        <small class="text-muted">Min: 5 min &bull; Max: 1440 min (24 hours) &bull; Current: {{ $client->session_timeout_minutes ?? 120 }} min</small>
+                    </div>
+                    @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

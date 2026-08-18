@@ -28,16 +28,19 @@ class ClientController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'address' => ['nullable', 'string'],
-            'mobile_number' => ['nullable', 'string', 'max:20'],
-            'gst_number' => ['nullable', 'string', 'max:30'],
-            'notes' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
-            'menu_labels' => ['nullable', 'array'],
+            'name'                    => ['required', 'string', 'max:150'],
+            'address'                 => ['nullable', 'string'],
+            'mobile_number'           => ['nullable', 'string', 'max:20'],
+            'gst_number'              => ['nullable', 'string', 'max:30'],
+            'notes'                   => ['nullable', 'string'],
+            'is_active'               => ['boolean'],
+            'menu_labels'             => ['nullable', 'array'],
+            'session_timeout_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        // Only SuperAdmin can set session timeout (default 120 if not provided)
+        $validated['session_timeout_minutes'] = $request->input('session_timeout_minutes', 120);
 
         // Process dynamic menu keys and values
         $menuLabels = [];
@@ -58,17 +61,20 @@ class ClientController extends Controller
     public function update(Request $request, Client $client)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'address' => ['nullable', 'string'],
-            'mobile_number' => ['nullable', 'string', 'max:20'],
-            'gst_number' => ['nullable', 'string', 'max:30'],
-            'notes' => ['nullable', 'string'],
-            'is_active' => ['boolean'],
-            'menu_keys' => ['nullable', 'array'],
-            'menu_values' => ['nullable', 'array'],
+            'name'                    => ['required', 'string', 'max:150'],
+            'address'                 => ['nullable', 'string'],
+            'mobile_number'           => ['nullable', 'string', 'max:20'],
+            'gst_number'              => ['nullable', 'string', 'max:30'],
+            'notes'                   => ['nullable', 'string'],
+            'is_active'               => ['boolean'],
+            'menu_keys'               => ['nullable', 'array'],
+            'menu_values'             => ['nullable', 'array'],
+            'session_timeout_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        // Only SuperAdmin can change session timeout
+        $validated['session_timeout_minutes'] = $request->input('session_timeout_minutes', $client->session_timeout_minutes ?? 120);
 
         // Process dynamic menu keys and values
         $menuLabels = [];

@@ -13,8 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'permission' => \App\Http\Middleware\CheckPermission::class,
+            'permission'   => \App\Http\Middleware\CheckPermission::class,
+            'superadmin'   => \App\Http\Middleware\SuperAdminOnly::class,
+            'session.timeout' => \App\Http\Middleware\CheckSessionTimeout::class,
         ]);
+
+        // Apply per-client session timeout check to all web routes
+        $middleware->appendToGroup('web', \App\Http\Middleware\CheckSessionTimeout::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -33,10 +38,4 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\Throwable $e, Request $request) {
-            if (!$request->is('api/*') && !$request->expectsJson()) {
-                $message = $e->getMessage() ?: 'An unexpected error occurred. Please try again.';
-                return redirect()->back()->with('error', $message);
-            }
-        });
     })->create();

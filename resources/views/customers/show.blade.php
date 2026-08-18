@@ -23,6 +23,17 @@
                     <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
                         <span><i class="bi bi-telephone text-primary me-1"></i> {{ $contact->phoneNumbers->first()->phone_number ?? 'No Phone' }}</span>
                         <span><i class="bi bi-wallet2 text-primary me-1"></i> Opening: ₹{{ number_format($contact->opening_balance, 2) }} ({{ $contact->opening_balance_type }})</span>
+                        @php
+                            // $currentBalance is passed directly from controller (SQL aggregate, no PHP loop)
+                        @endphp
+                        <span class="fw-semibold {{ $currentBalance > 0 ? 'text-danger' : ($currentBalance < 0 ? 'text-success' : 'text-muted') }}">
+                            <i class="bi bi-bar-chart-line me-1"></i>
+                            Balance: ₹{{ number_format(abs($currentBalance), 2) }}
+                            @if($currentBalance > 0) (Due)
+                            @elseif($currentBalance < 0) (Advance)
+                            @else (Clear)
+                            @endif
+                        </span>
                         @if($contact->address)
                             <span><i class="bi bi-geo-alt text-primary me-1"></i> {{ $contact->address }}</span>
                         @endif
@@ -59,7 +70,6 @@
                             <th>Description</th>
                             <th>Payment Mode</th>
                             <th class="text-end">Amount</th>
-                            <th class="text-end">Running Balance</th>
                             <th class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -81,7 +91,6 @@
                                 <td>{{ $tx->description }}</td>
                                 <td><span class="badge bg-light text-dark border">{{ $tx->payment_mode ?? '—' }}</span></td>
                                 <td class="text-end fw-bold">₹{{ number_format($tx->amount, 2) }}</td>
-                                <td class="text-end fw-bold text-primary">₹{{ number_format($tx->running_balance, 2) }}</td>
                                 <td class="text-end">
                                     @if($tx->status !== 'VOID' && (auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('transactions.void')))
                                         <form method="POST" action="{{ route('transactions.void', $tx->id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to void this transaction?')">
@@ -130,7 +139,6 @@
                         </div>
                         <div class="text-end">
                             <div class="fw-bold fs-6">₹{{ number_format($tx->amount, 2) }}</div>
-                            <div class="small text-primary fw-semibold">Bal: ₹{{ number_format($tx->running_balance, 2) }}</div>
                         </div>
                     </div>
                     <p class="small text-dark mb-2 {{ $tx->status === 'VOID' ? 'text-decoration-line-through' : '' }}">{{ $tx->description }}</p>

@@ -4,10 +4,11 @@ use Illuminate\Database\Eloquent\Model;
 class Client extends Model
 {
     protected $table = 'clients';
-    protected $fillable = ['name', 'menu_labels', 'address', 'mobile_number', 'gst_number', 'notes', 'is_active'];
+    protected $fillable = ['name', 'menu_labels', 'address', 'mobile_number', 'gst_number', 'notes', 'is_active', 'session_timeout_minutes'];
     protected $casts = [
         'is_active' => 'boolean',
         'menu_labels' => 'array',
+        'session_timeout_minutes' => 'integer',
     ];
 
     public function getMenuLabel(string $key, string $default): string

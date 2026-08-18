@@ -2,22 +2,26 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-2">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
         <div>
-            <h3 class="fw-bold text-dark mb-1">Suppliers</h3>
-            <p class="text-muted small mb-0 d-none d-sm-block">Manage supplier accounts and purchase ledgers</p>
+            <h3 class="fw-bold text-dark mb-0">Suppliers</h3>
         </div>
-        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('suppliers.manage'))
-            <button class="btn btn-primary w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#addPartyModal">
+        <div class="d-flex gap-2 justify-content-start justify-content-sm-end">
+            <button class="btn btn-sm btn-outline-danger" id="supplierPdfExportBtn" onclick="handlePdfExport(this, '{{ route('suppliers.index', array_merge(request()->all(), ['export' => 'pdf'])) }}')">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+            </button>
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('suppliers.manage'))
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPartyModal">
                 <i class="bi bi-truck me-1"></i> Add Supplier
             </button>
-        @endif
+            @endif
+        </div>
     </div>
 
     <!-- Search Bar -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ route('suppliers.index') }}" class="row g-2">
+            <form method="GET" action="{{ route('suppliers.index') }}" class="row g-2 align-items-center">
                 <div class="col-12 col-md-5">
                     <input type="text" name="search" class="form-control" placeholder="Search by name, khata no or phone..." value="{{ request('search') }}">
                 </div>
@@ -25,9 +29,9 @@
                     <button type="submit" class="btn btn-secondary w-100"><i class="bi bi-search me-1"></i> Search</button>
                 </div>
                 @if(request('search'))
-                    <div class="col-6 col-md-auto">
-                        <a href="{{ route('suppliers.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
-                    </div>
+                <div class="col-6 col-md-auto">
+                    <a href="{{ route('suppliers.index') }}" class="btn btn-outline-secondary w-100"><i class="bi bi-x-lg me-1"></i> Reset</a>
+                </div>
                 @endif
             </form>
         </div>
