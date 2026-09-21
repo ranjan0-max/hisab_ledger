@@ -126,10 +126,158 @@
             .btn {
                 padding: 9px 16px;
             }
-            .offcanvas {
-                border-top-right-radius: 20px;
-                border-bottom-right-radius: 20px;
+            .mobile-menu-drawer {
+                width: min(86vw, 320px) !important;
+                max-width: 320px !important;
+                border: 0 !important;
+                border-top-right-radius: 18px;
+                border-bottom-right-radius: 18px;
                 background: #0f172a !important;
+                box-shadow: 14px 0 35px rgba(2, 6, 23, 0.28);
+            }
+            .mobile-menu-header {
+                padding: 1rem;
+                border-bottom: 1px solid #1e293b !important;
+            }
+            .mobile-brand-icon {
+                display: inline-flex;
+                flex: 0 0 38px;
+                align-items: center;
+                justify-content: center;
+                width: 38px;
+                height: 38px;
+                border-radius: 11px;
+                color: #818cf8;
+                background: #1e293b;
+            }
+            .mobile-brand-title {
+                color: #f8fafc;
+                font-size: 0.95rem;
+                font-weight: 700;
+                line-height: 1.2;
+            }
+            .mobile-brand-subtitle {
+                color: #64748b;
+                font-size: 0.68rem;
+            }
+            .mobile-menu-close {
+                width: 34px;
+                height: 34px;
+                padding: 0 !important;
+                border-radius: 9px !important;
+                background-color: #1e293b;
+                opacity: 0.9;
+            }
+            .mobile-menu-body {
+                display: flex;
+                flex-direction: column;
+                padding: 0.75rem !important;
+            }
+            .mobile-menu-drawer .min-w-0 {
+                min-width: 0;
+            }
+            .mobile-menu-drawer .mobile-nav {
+                display: flex;
+                flex-direction: column;
+                min-height: 100%;
+            }
+            .mobile-menu-label {
+                padding: 0.35rem 0.75rem 0.5rem;
+                color: #64748b;
+                font-size: 0.65rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            .mobile-menu-drawer .mobile-nav > a {
+                min-height: 48px;
+                margin-bottom: 3px;
+                padding: 0.45rem 0.65rem;
+                border: 1px solid transparent;
+                border-radius: 10px;
+                color: #cbd5e1;
+                font-size: 0.86rem;
+                font-weight: 500;
+                transform: none;
+            }
+            .mobile-menu-drawer .mobile-nav > a > i {
+                display: inline-flex;
+                flex: 0 0 34px;
+                align-items: center;
+                justify-content: center;
+                width: 34px;
+                height: 34px;
+                margin-right: 0.7rem !important;
+                border-radius: 9px;
+                color: #94a3b8;
+                background: #1e293b;
+                font-size: 1rem;
+            }
+            .mobile-menu-drawer .mobile-nav > a:hover {
+                border-color: #26354a;
+                color: #ffffff;
+                background: #172033;
+                transform: none;
+            }
+            .mobile-menu-drawer .mobile-nav > a.active {
+                border-color: rgba(129, 140, 248, 0.28);
+                color: #ffffff;
+                background: rgba(79, 70, 229, 0.16);
+                box-shadow: none;
+            }
+            .mobile-menu-drawer .mobile-nav > a.active > i {
+                color: #c7d2fe;
+                background: rgba(79, 70, 229, 0.3);
+            }
+            .mobile-menu-footer {
+                margin-top: auto;
+                padding: 0.85rem 0.5rem 0.25rem;
+                border-top: 1px solid #1e293b;
+            }
+            .mobile-user-summary {
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                min-width: 0;
+                margin-bottom: 0.75rem;
+                padding: 0 0.25rem;
+            }
+            .mobile-user-avatar {
+                display: inline-flex;
+                flex: 0 0 34px;
+                align-items: center;
+                justify-content: center;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                color: #cbd5e1;
+                background: #1e293b;
+                font-size: 0.78rem;
+                font-weight: 700;
+            }
+            .mobile-user-name {
+                overflow: hidden;
+                color: #e2e8f0;
+                font-size: 0.78rem;
+                font-weight: 600;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .mobile-user-label {
+                color: #64748b;
+                font-size: 0.65rem;
+            }
+            .mobile-logout-button {
+                border-color: #334155 !important;
+                color: #fca5a5 !important;
+                background: #172033 !important;
+                font-size: 0.8rem;
+            }
+            .mobile-logout-button:hover,
+            .mobile-logout-button:active {
+                border-color: #7f1d1d !important;
+                color: #fecaca !important;
+                background: rgba(127, 29, 29, 0.2) !important;
             }
             .modal-dialog {
                 margin: 0 !important;
@@ -246,11 +394,13 @@
                     </a>
                 @endif
 
+                {{-- Audit Logs menu hidden for all users.
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('audit.view'))
                     <a href="{{ route('audit-logs.index') }}" class="{{ request()->routeIs('audit-logs.*') ? 'active' : '' }}">
                         <i class="bi bi-receipt-cutoff me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('audit-logs', 'Audit Logs') : 'Audit Logs' }}
                     </a>
                 @endif
+                --}}
 
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('slow_query.view'))
                     <a href="{{ route('slow-queries.index') }}" class="{{ request()->routeIs('slow-queries.*') ? 'active' : '' }}">
@@ -258,11 +408,13 @@
                     </a>
                 @endif
 
+                {{-- Database Backups menu hidden for all users.
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('backup.view'))
                     <a href="{{ route('database-backups.index') }}" class="{{ request()->routeIs('database-backups.*') ? 'active' : '' }}">
                         <i class="bi bi-cloud-arrow-down-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('database-backups', 'Database Backups') : 'Database Backups' }}
                     </a>
                 @endif
+                --}}
             </nav>
         </div>
 
@@ -333,16 +485,20 @@
             </nav>
 
             <!-- Mobile Offcanvas Drawer Sidebar -->
-            <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="mobileSidebar" style="max-width: 280px;">
-                <div class="offcanvas-header border-bottom border-secondary">
-                    <h5 class="offcanvas-title fw-bold d-flex align-items-center gap-2">
-                        <i class="bi bi-wallet2 text-primary"></i>
-                        <span>{{ config('app.name') }}</span>
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+            <div class="offcanvas offcanvas-start mobile-menu-drawer text-white" tabindex="-1" id="mobileSidebar">
+                <div class="offcanvas-header mobile-menu-header">
+                    <div class="d-flex align-items-center gap-2 min-w-0">
+                        <span class="mobile-brand-icon"><i class="bi bi-wallet2"></i></span>
+                        <div class="min-w-0">
+                            <div class="mobile-brand-title text-truncate">{{ config('app.name') }}</div>
+                            <div class="mobile-brand-subtitle">Business workspace</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white mobile-menu-close" data-bs-dismiss="offcanvas" aria-label="Close menu"></button>
                 </div>
-                <div class="offcanvas-body p-2">
+                <div class="offcanvas-body mobile-menu-body">
                     <nav class="mobile-nav w-100 p-0">
+                        <div class="mobile-menu-label">Menu</div>
                         <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
                             <i class="bi bi-grid-1x2-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('dashboard', 'Dashboard') : 'Dashboard' }}
                         </a>
@@ -383,11 +539,13 @@
                             </a>
                         @endif
 
+                        {{-- Audit Logs menu hidden for all users.
                         @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('audit.view'))
                             <a href="{{ route('audit-logs.index') }}" class="{{ request()->routeIs('audit-logs.*') ? 'active' : '' }}">
                                 <i class="bi bi-receipt-cutoff me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('audit-logs', 'Audit Logs') : 'Audit Logs' }}
                             </a>
                         @endif
+                        --}}
 
                         @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('slow_query.view'))
                             <a href="{{ route('slow-queries.index') }}" class="{{ request()->routeIs('slow-queries.*') ? 'active' : '' }}">
@@ -395,16 +553,25 @@
                             </a>
                         @endif
 
+                        {{-- Database Backups menu hidden for all users.
                         @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('backup.view'))
                             <a href="{{ route('database-backups.index') }}" class="{{ request()->routeIs('database-backups.*') ? 'active' : '' }}">
                                 <i class="bi bi-cloud-arrow-down-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('backup', 'Database Backups') : 'Database Backups' }}
                             </a>
                         @endif
+                        --}}
 
-                        <div class="mt-4 pt-3 border-top border-secondary">
+                        <div class="mobile-menu-footer">
+                            <div class="mobile-user-summary">
+                                <span class="mobile-user-avatar">{{ strtoupper(substr(auth()->user()->username, 0, 1)) }}</span>
+                                <div class="min-w-0">
+                                    <div class="mobile-user-label">Signed in as</div>
+                                    <div class="mobile-user-name">{{ auth()->user()->username }}</div>
+                                </div>
+                            </div>
                             <form method="POST" action="{{ route('logout') }}" class="m-0">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2">
+                                <button type="submit" class="btn mobile-logout-button w-100 d-flex align-items-center justify-content-center gap-2">
                                     <i class="bi bi-box-arrow-right"></i> Logout
                                 </button>
                             </form>

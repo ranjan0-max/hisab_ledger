@@ -1,6 +1,133 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    @media (max-width: 767.98px) {
+        .recent-transactions-mobile {
+            display: grid;
+            gap: 0.6rem;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            padding: 0.75rem !important;
+            background: #f8fafc;
+        }
+
+        .transaction-mobile-card {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            box-sizing: border-box;
+            padding: 0.9rem;
+            border: 1px solid #e2e8f0 !important;
+            border-left: 1px solid #e2e8f0 !important;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: none;
+        }
+
+        .transaction-mobile-card:active {
+            transform: none;
+        }
+
+        .transaction-card-header {
+            display: block;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .transaction-party {
+            display: block;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            color: #0f172a;
+            font-size: 0.88rem;
+            font-weight: 700;
+            line-height: 1.3;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+
+        .transaction-amount {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .transaction-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.25rem;
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        .transaction-meta-separator {
+            color: #cbd5e1;
+        }
+
+        .transaction-khata {
+            display: inline-flex;
+            padding: 0.12rem 0.38rem;
+            border: 1px solid #c7d2fe;
+            border-radius: 5px;
+            color: #4f46e5;
+            background: #eef2ff;
+            font-weight: 600;
+        }
+
+        .transaction-card-footer {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            margin-top: 0.7rem;
+            padding-top: 0.65rem;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .transaction-type {
+            flex: 0 0 auto;
+            padding: 0.2rem 0.45rem;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1.35;
+        }
+
+        .transaction-type-credit {
+            border-color: #bbf7d0;
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        .transaction-type-debit {
+            border-color: #fecaca;
+            color: #b91c1c;
+            background: #fef2f2;
+        }
+
+        .transaction-description {
+            display: -webkit-box;
+            overflow: hidden;
+            color: #64748b;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+    }
+</style>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
@@ -100,31 +227,28 @@
         </div>
 
         <!-- Mobile Cards View for Recent Transactions -->
-        <div class="card-body p-2 d-md-none">
+        <div class="card-body recent-transactions-mobile d-md-none">
             @forelse($recentTransactions as $tx)
-                <div class="mobile-card p-3 mb-2 rounded-3 border">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div>
-                            <h6 class="fw-bold text-dark mb-0" style="font-size: 14px;">{{ $tx->contact->name ?? 'N/A' }}</h6>
-                            <span class="small text-muted d-block" style="font-size: 11px;">
-                                Khata No: {{ $tx->contact->khata_number ?? 'N/A' }}
-                            </span>
-                            <span class="small text-muted" style="font-size: 11px;">
-                                <i class="bi bi-calendar-event me-1"></i>{{ $tx->transaction_date->format('d M Y') }}
-                            </span>
-                        </div>
-                        <div class="text-end">
-                            <div class="fw-bold fs-6 {{ in_array($tx->transaction_type, ['PAYMENT', 'CUSTOMER_PAYMENT', 'SUPPLIER_PAYMENT']) ? 'text-success' : 'text-danger' }}">
-                                ₹{{ number_format($tx->amount, 2) }}
-                            </div>
-                            <span class="badge bg-light text-dark border" style="font-size: 10px;">{{ $tx->transaction_type }}</span>
+                <div class="mobile-card transaction-mobile-card">
+                    <div class="transaction-card-header">
+                        <div class="transaction-party">{{ $tx->contact->name ?? 'N/A' }}</div>
+                        <div class="transaction-amount {{ in_array($tx->transaction_type, ['PAYMENT', 'CUSTOMER_PAYMENT', 'SUPPLIER_PAYMENT']) ? 'text-success' : 'text-danger' }}">
+                            ₹{{ number_format($tx->amount, 2) }}
                         </div>
                     </div>
-                    @if($tx->description)
-                        <div class="small text-secondary mt-1 bg-light p-2 rounded" style="font-size: 12px;">
-                            {{ $tx->description }}
-                        </div>
-                    @endif
+                    <div class="transaction-meta">
+                        <span class="transaction-khata">Khata #{{ $tx->contact->khata_number ?? 'N/A' }}</span>
+                        <span class="transaction-meta-separator">&bull;</span>
+                        <span><i class="bi bi-calendar3 me-1"></i>{{ $tx->transaction_date->format('d M Y') }}</span>
+                    </div>
+                    <div class="transaction-card-footer">
+                        <span class="transaction-type {{ in_array($tx->transaction_type, ['PAYMENT', 'CUSTOMER_PAYMENT', 'SUPPLIER_PAYMENT']) ? 'transaction-type-credit' : 'transaction-type-debit' }}">
+                            {{ str_replace('_', ' ', $tx->transaction_type) }}
+                        </span>
+                        @if($tx->description)
+                            <span class="transaction-description">{{ $tx->description }}</span>
+                        @endif
+                    </div>
                 </div>
             @empty
                 <div class="text-center text-muted py-4 small">No recent transactions found.</div>

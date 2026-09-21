@@ -1,6 +1,217 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    @media (max-width: 767.98px) {
+        .daily-mobile-card {
+            border: 1px solid #e2e8f0 !important;
+            border-left: 1px solid #e2e8f0 !important;
+            border-radius: 14px !important;
+            background: #ffffff;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+        }
+
+        .daily-mobile-card:active {
+            transform: none;
+        }
+
+        .daily-mobile-card .card-body {
+            padding: 1rem !important;
+        }
+
+        .daily-mobile-card .min-w-0 {
+            min-width: 0;
+        }
+
+        .daily-entry-void {
+            opacity: 0.68;
+        }
+
+        .daily-entry-date {
+            color: #94a3b8;
+            font-size: 0.68rem;
+        }
+
+        .daily-entry-name {
+            margin-top: 0.15rem;
+            color: #0f172a;
+            font-size: 0.95rem;
+            line-height: 1.3;
+        }
+
+        .daily-entry-phone {
+            margin-top: 0.2rem;
+            color: #64748b;
+            font-size: 0.72rem;
+        }
+
+        .daily-status {
+            display: inline-flex;
+            flex: 0 0 auto;
+            padding: 0.2rem 0.5rem;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .daily-status-paid {
+            border-color: #bbf7d0;
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        .daily-status-partial {
+            border-color: #fde68a;
+            color: #a16207;
+            background: #fffbeb;
+        }
+
+        .daily-status-unpaid {
+            border-color: #fecaca;
+            color: #b91c1c;
+            background: #fef2f2;
+        }
+
+        .daily-status-advance {
+            border-color: #a5f3fc;
+            color: #0e7490;
+            background: #ecfeff;
+        }
+
+        .daily-amount-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+            margin-top: 0.8rem;
+        }
+
+        .daily-amount-item {
+            min-width: 0;
+            padding: 0.65rem 0.7rem;
+            border: 1px solid transparent;
+            border-radius: 10px;
+        }
+
+        .daily-amount-paid {
+            border-color: #dcfce7;
+            background: #f0fdf4;
+        }
+
+        .daily-amount-due {
+            border-color: #fee2e2;
+            background: #fef2f2;
+        }
+
+        .daily-amount-label {
+            display: block;
+            margin-bottom: 0.15rem;
+            color: #94a3b8;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .daily-amount-value {
+            display: block;
+            overflow: hidden;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .daily-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+            padding-top: 0.7rem;
+            border-top: 1px solid #eef2f7;
+        }
+
+        .daily-card-action {
+            border-radius: 8px;
+            font-size: 0.74rem;
+            font-weight: 600;
+        }
+
+        .daily-action-pay {
+            border-color: #bbf7d0;
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        .daily-action-history {
+            border-color: #a5f3fc;
+            color: #0e7490;
+            background: #ecfeff;
+        }
+
+        .daily-action-edit {
+            border-color: #c7d2fe;
+            color: #4338ca;
+            background: #eef2ff;
+        }
+
+        .daily-action-void {
+            border-color: #fecaca;
+            color: #b91c1c;
+            background: #fef2f2;
+        }
+
+        .daily-payment-modal .modal-dialog {
+            height: calc(100vh - 0.75rem) !important;
+            height: calc(100dvh - 0.75rem) !important;
+            max-height: calc(100vh - 0.75rem) !important;
+            max-height: calc(100dvh - 0.75rem) !important;
+            min-height: 0 !important;
+        }
+
+        .daily-payment-modal .modal-content,
+        .daily-payment-modal .modal-content > form {
+            height: 100% !important;
+            max-height: 100% !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+        }
+
+        .daily-payment-modal .modal-content > form {
+            display: flex !important;
+            flex-direction: column;
+        }
+
+        .daily-payment-modal .modal-header,
+        .daily-payment-modal .modal-footer {
+            flex: 0 0 auto;
+        }
+
+        .daily-payment-modal .modal-body {
+            flex: 1 1 auto;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
+            padding: 1rem;
+        }
+
+        .daily-payment-modal .modal-footer {
+            flex-wrap: nowrap;
+            padding: 0.75rem 1rem;
+        }
+
+        .daily-payment-modal .modal-footer .btn {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+    }
+</style>
 <div class="container-fluid">
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
         <div>
@@ -127,56 +338,54 @@
     <!-- Mobile Cards View for Daily Entries -->
     <div class="d-md-none">
         @forelse($entries as $entry)
-            <div class="mobile-card card border-0 shadow-sm mb-3 {{ $entry->status === 'VOID' ? 'bg-light text-decoration-line-through' : '' }}">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <span class="small text-muted" style="font-size: 11px;">
+            <div class="mobile-card card daily-mobile-card mb-3 {{ $entry->status === 'VOID' ? 'daily-entry-void' : '' }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div class="min-w-0">
+                            <span class="daily-entry-date">
                                 <i class="bi bi-calendar-event me-1"></i>{{ \Carbon\Carbon::parse($entry->entry_date)->format('d M Y') }}
                             </span>
-                            <h5 class="fw-bold mb-0 text-dark">{{ $entry->customer_name }}</h5>
+                            <h5 class="daily-entry-name fw-bold mb-0 text-break">{{ $entry->customer_name }}</h5>
                             @if($entry->mobile_number)
-                                <div class="small text-muted"><i class="bi bi-telephone me-1"></i>{{ $entry->mobile_number }}</div>
+                                <div class="daily-entry-phone"><i class="bi bi-telephone me-1"></i>{{ $entry->mobile_number }}</div>
                             @endif
                         </div>
-                        <div>
-                            @if($entry->payment_status === 'PAID')
-                                <span class="badge bg-success-subtle text-success border border-success-subtle">PAID</span>
-                            @elseif($entry->payment_status === 'PARTIAL')
-                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle">PARTIAL</span>
-                            @elseif($entry->payment_status === 'UNPAID')
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">UNPAID</span>
-                            @else
-                                <span class="badge bg-info-subtle text-info border border-info-subtle">ADVANCE</span>
-                            @endif
-                        </div>
+                        @if($entry->payment_status === 'PAID')
+                            <span class="daily-status daily-status-paid">PAID</span>
+                        @elseif($entry->payment_status === 'PARTIAL')
+                            <span class="daily-status daily-status-partial">PARTIAL</span>
+                        @elseif($entry->payment_status === 'UNPAID')
+                            <span class="daily-status daily-status-unpaid">UNPAID</span>
+                        @else
+                            <span class="daily-status daily-status-advance">ADVANCE</span>
+                        @endif
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded-3 mb-2 small border">
-                        <div class="text-center flex-fill border-end">
-                            <span class="text-muted d-block" style="font-size: 10px;">PAID</span>
-                            <strong class="text-success">₹{{ number_format($entry->paid_amount, 2) }}</strong>
+                    <div class="daily-amount-grid">
+                        <div class="daily-amount-item daily-amount-paid">
+                            <span class="daily-amount-label">PAID</span>
+                            <span class="daily-amount-value text-success">₹{{ number_format($entry->paid_amount, 2) }}</span>
                         </div>
-                        <div class="text-center flex-fill">
-                            <span class="text-muted d-block" style="font-size: 10px;">DUE / REMAINING</span>
-                            <strong class="text-danger">₹{{ number_format($entry->remaining_amount, 2) }}</strong>
+                        <div class="daily-amount-item daily-amount-due">
+                            <span class="daily-amount-label">DUE / REMAINING</span>
+                            <span class="daily-amount-value text-danger">₹{{ number_format($entry->remaining_amount, 2) }}</span>
                         </div>
                     </div>
 
                     @if($entry->status !== 'VOID' && (auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('daily.manage')))
-                        <div class="d-flex justify-content-end gap-1 mt-2">
-                            <button class="btn btn-sm btn-success py-1 px-2 text-white" data-bs-toggle="modal" data-bs-target="#addPaymentModal{{ $entry->id }}" title="Receive Payment">
+                        <div class="daily-card-actions">
+                            <button class="btn btn-sm daily-card-action daily-action-pay" data-bs-toggle="modal" data-bs-target="#addPaymentModal{{ $entry->id }}" title="Receive Payment">
                                 <i class="bi bi-cash-stack me-1"></i> Pay
                             </button>
-                            <button class="btn btn-sm btn-outline-info py-1 px-2" data-bs-toggle="modal" data-bs-target="#historyModal{{ $entry->id }}" title="Payment History">
+                            <button class="btn btn-sm daily-card-action daily-action-history" data-bs-toggle="modal" data-bs-target="#historyModal{{ $entry->id }}" title="Payment History">
                                 <i class="bi bi-clock-history"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#editEntryModal{{ $entry->id }}" title="Edit Entry">
+                            <button class="btn btn-sm daily-card-action daily-action-edit" data-bs-toggle="modal" data-bs-target="#editEntryModal{{ $entry->id }}" title="Edit Entry">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <form method="POST" action="{{ route('daily.void', $entry->id) }}" class="d-inline" onsubmit="return confirm('Void this daily entry?')">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Void Entry">
+                                <button type="submit" class="btn btn-sm daily-card-action daily-action-void" title="Void Entry">
                                     <i class="bi bi-slash-circle"></i>
                                 </button>
                             </form>
@@ -290,8 +499,8 @@
 </div>
 
 <!-- Receive Installment Payment Modal -->
-<div class="modal fade" id="addPaymentModal{{ $entry->id }}" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade daily-payment-modal" id="addPaymentModal{{ $entry->id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
             <form method="POST" action="{{ route('daily.payments.store', $entry->id) }}">
                 @csrf
@@ -301,11 +510,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-light border mb-3">
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between gap-1">
                             <span>Customer: <strong>{{ $entry->customer_name }}</strong></span>
                             <span>Total Bill: <strong>₹{{ number_format($entry->total_amount, 2) }}</strong></span>
                         </div>
-                        <div class="d-flex justify-content-between mt-1">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between gap-1 mt-1">
                             <span>Total Paid: <strong class="text-success">₹{{ number_format($entry->paid_amount, 2) }}</strong></span>
                             <span>Remaining Due: <strong class="text-danger">₹{{ number_format($entry->remaining_amount, 2) }}</strong></span>
                         </div>

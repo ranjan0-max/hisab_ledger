@@ -32,7 +32,193 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        .customer-filter-card {
+            border: 1px solid #e0e7ff !important;
+            background: #ffffff;
+            box-shadow: 0 5px 18px rgba(79, 70, 229, 0.06) !important;
+        }
+
+        .customer-filter-heading {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-bottom: 1rem;
+        }
+
+        .customer-filter-icon {
+            display: inline-flex;
+            flex: 0 0 34px;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid #c7d2fe;
+            border-radius: 9px;
+            color: #4f46e5;
+            background: #eef2ff;
+        }
+
+        .customer-filter-title {
+            color: #334155;
+            font-size: 0.84rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .customer-filter-subtitle {
+            margin-top: 0.12rem;
+            color: #94a3b8;
+            font-size: 0.68rem;
+        }
+
+        .customer-filter-label {
+            margin-bottom: 0.35rem;
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .customer-filter-control .input-group-text {
+            border-color: #e2e8f0;
+            color: #6366f1;
+            background: #f8fafc;
+        }
+
+        .customer-filter-control .form-control,
+        .customer-filter-control .form-select {
+            border-color: #e2e8f0;
+            color: #334155;
+            background-color: #ffffff;
+            font-size: 0.82rem;
+        }
+
+        .customer-filter-control:focus-within .input-group-text,
+        .customer-filter-control:focus-within .form-control,
+        .customer-filter-control:focus-within .form-select {
+            border-color: #a5b4fc;
+            box-shadow: none;
+        }
+
+        .customer-filter-submit {
+            border-color: #c7d2fe;
+            color: #4338ca;
+            background: #eef2ff;
+        }
+
+        .customer-filter-reset {
+            border-color: #e2e8f0;
+            color: #64748b;
+            background: #f8fafc;
+        }
+
         @media (max-width: 767.98px) {
+            .customer-mobile-card {
+                border: 1px solid #e2e8f0 !important;
+                border-left: 1px solid #e2e8f0 !important;
+                border-radius: 14px !important;
+                background: #ffffff;
+                box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+            }
+
+            .customer-mobile-card:active {
+                transform: none;
+            }
+
+            .customer-mobile-card .card-body {
+                padding: 1rem !important;
+            }
+
+            .customer-mobile-card .min-w-0 {
+                min-width: 0;
+            }
+
+            .customer-card-name {
+                color: #0f172a;
+                font-size: 0.95rem;
+                line-height: 1.3;
+            }
+
+            .customer-khata {
+                display: inline-flex;
+                margin-top: 0.15rem;
+                padding: 0.18rem 0.45rem;
+                border: 1px solid #c7d2fe;
+                border-radius: 6px;
+                color: #4f46e5;
+                background: #eef2ff;
+                font-size: 0.7rem;
+                font-weight: 600;
+            }
+
+            .customer-balance {
+                flex: 0 0 auto;
+                text-align: right;
+            }
+
+            .customer-balance-amount {
+                font-size: 0.88rem;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            .customer-balance-label {
+                display: inline-flex;
+                margin-top: 0.1rem;
+                padding: 0.15rem 0.4rem;
+                border-radius: 999px;
+                font-size: 0.62rem;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+            }
+
+            .customer-balance-advance {
+                color: #15803d;
+                background: #f0fdf4;
+            }
+
+            .customer-balance-due {
+                color: #b91c1c;
+                background: #fef2f2;
+            }
+
+            .customer-balance-settled {
+                color: #475569;
+                background: #f1f5f9;
+            }
+
+            .customer-phone {
+                margin-top: 0.75rem;
+                padding-top: 0.65rem;
+                border-top: 1px solid #eef2f7;
+                color: #64748b;
+                font-size: 0.76rem;
+            }
+
+            .customer-card-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+                margin-top: 0.7rem;
+            }
+
+            .customer-card-action {
+                border-radius: 8px;
+                font-size: 0.76rem;
+                font-weight: 600;
+            }
+
+            .customer-card-action-primary {
+                border-color: #c7d2fe;
+                color: #4338ca;
+                background: #eef2ff;
+            }
+
+            .customer-card-action-secondary {
+                border-color: #e2e8f0;
+                color: #475569;
+                background: #f8fafc;
+            }
+
             .customer-form-modal .modal-dialog {
                 height: 92dvh !important;
                 max-height: 92dvh !important;
@@ -114,38 +300,57 @@
         </div>
 
         <!-- Search & Inactivity Filters -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body">
-                <form method="GET" action="{{ route('customers.index') }}" class="row g-2 align-items-center">
+        <div class="card customer-filter-card mb-4">
+            <div class="card-body p-3 p-md-4">
+                <!-- <div class="customer-filter-heading">
+                    <span class="customer-filter-icon"><i class="bi bi-funnel"></i></span>
+                    <div>
+                        <div class="customer-filter-title">Filter Customers</div>
+                        <div class="customer-filter-subtitle">Search and narrow down the customer list</div>
+                    </div>
+                </div> -->
+                <form method="GET" action="{{ route('customers.index') }}" class="row g-3 align-items-end">
                     <div class="col-12 col-lg-4">
-                        <input type="text" name="search" class="form-control"
-                            placeholder="Search by name, khata no or phone..." value="{{ request('search') }}">
+                        <label class="customer-filter-label" for="customerSearch">Search</label>
+                        <div class="input-group customer-filter-control">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" id="customerSearch" class="form-control"
+                                placeholder="Name, khata no" value="{{ request('search') }}">
+                        </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <select name="inactive_months" class="form-select" onchange="this.form.submit()">
-                            <option value="">-- Filter Inactive Customers (All) --</option>
-                            @for($m = 1; $m <= 12; $m++)
-                                <option value="{{ $m }}" {{ request('inactive_months') == $m ? 'selected' : '' }}>
-                                    Inactive for {{ $m }} {{ $m == 1 ? 'Month' : 'Months' }}
+                        <label class="customer-filter-label" for="customerActivity">Activity</label>
+                        <div class="input-group customer-filter-control">
+                            <span class="input-group-text"><i class="bi bi-clock-history"></i></span>
+                            <select name="inactive_months" id="customerActivity" class="form-select" onchange="this.form.submit()">
+                                <option value="">All customers</option>
+                                @for($m = 1; $m <= 12; $m++)
+                                    <option value="{{ $m }}" {{ request('inactive_months') == $m ? 'selected' : '' }}>
+                                        Inactive for {{ $m }} {{ $m == 1 ? 'month' : 'months' }}
+                                    </option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label class="customer-filter-label" for="customerBalance">Balance</label>
+                        <div class="input-group customer-filter-control">
+                            <span class="input-group-text"><i class="bi bi-wallet2"></i></span>
+                            <select name="balance_filter" id="customerBalance" class="form-select" onchange="this.form.submit()">
+                                <option value="">All balances</option>
+                                <option value="non_zero" {{ request('balance_filter') === 'non_zero' ? 'selected' : '' }}>
+                                    Hide zero balance
                                 </option>
-                            @endfor
-                        </select>
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-3">
-                        <select name="balance_filter" class="form-select" onchange="this.form.submit()">
-                            <option value="">-- All Balances --</option>
-                            <option value="non_zero" {{ request('balance_filter') === 'non_zero' ? 'selected' : '' }}>
-                                Hide Zero Balance
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-auto">
-                        <button type="submit" class="btn btn-secondary w-100"><i class="bi bi-filter me-1"></i>
+                    <div class="{{ request('search') || request('inactive_months') || request('balance_filter') ? 'col-6' : 'col-12' }} col-md-auto">
+                        <button type="submit" class="btn customer-filter-submit w-100"><i class="bi bi-funnel me-1"></i>
                             Filter</button>
                     </div>
                     @if(request('search') || request('inactive_months') || request('balance_filter'))
                         <div class="col-6 col-md-auto">
-                            <a href="{{ route('customers.index') }}" class="btn btn-outline-secondary w-100"><i
+                            <a href="{{ route('customers.index') }}" class="btn customer-filter-reset w-100"><i
                                     class="bi bi-x-lg me-1"></i> Reset</a>
                         </div>
                     @endif
@@ -217,38 +422,39 @@
         <!-- Mobile View (Cards) -->
         <div class="d-md-none">
             @forelse($contacts as $contact)
-                <div class="card mobile-card border-0 shadow-sm mb-3">
+                <div class="card mobile-card customer-mobile-card mb-3">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-1">Khata
-                                    #{{ $contact->khata_number }}</span>
-                                <h5 class="fw-bold mb-0">{{ $contact->name }}</h5>
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div class="min-w-0">
+                                <h5 class="customer-card-name fw-bold mb-0 text-break">{{ $contact->name }}</h5>
+                                <div class="customer-khata">Khata #{{ $contact->khata_number }}</div>
                             </div>
-                            <div class="d-flex gap-1">
-                                <a href="{{ route('customers.show', $contact->id) }}" class="btn btn-sm btn-outline-primary"
-                                    title="View Ledger">
-                                    <i class="bi bi-journal-text"></i>
-                                </a>
-                                @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('customers.manage'))
-                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
-                                        data-bs-target="#editPartyModal{{ $contact->id }}" title="Edit Customer">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
+                            <div class="customer-balance">
+                                @if($contact->current_balance < 0)
+                                    <div class="customer-balance-amount text-success">₹{{ number_format(abs($contact->current_balance), 2) }}</div>
+                                    <div class="customer-balance-label customer-balance-advance">ADVANCE</div>
+                                @elseif($contact->current_balance > 0)
+                                    <div class="customer-balance-amount text-danger">₹{{ number_format($contact->current_balance, 2) }}</div>
+                                    <div class="customer-balance-label customer-balance-due">DUE</div>
+                                @else
+                                    <div class="customer-balance-amount text-secondary">₹0.00</div>
+                                    <div class="customer-balance-label customer-balance-settled">SETTLED</div>
                                 @endif
                             </div>
                         </div>
-                        <div class="small text-muted mb-1"><i class="bi bi-telephone me-1"></i>
-                            {{ $contact->phoneNumbers->first()->phone_number ?? 'N/A' }}</div>
-                        <div class="small mb-0">
-                            Current Balance:
-                            @if($contact->current_balance < 0)
-                                <strong class="text-success">₹{{ number_format(abs($contact->current_balance), 2) }}
-                                    (ADVANCE)</strong>
-                            @elseif($contact->current_balance > 0)
-                                <strong class="text-danger">₹{{ number_format($contact->current_balance, 2) }} (DUE)</strong>
-                            @else
-                                <strong class="text-secondary">₹0.00</strong>
+                        <div class="customer-phone">
+                            <i class="bi bi-telephone me-1"></i>
+                            {{ $contact->phoneNumbers->first()->phone_number ?? 'N/A' }}
+                        </div>
+                        <div class="customer-card-actions">
+                            <a href="{{ route('customers.show', $contact->id) }}" class="btn btn-sm customer-card-action customer-card-action-primary" title="View Ledger">
+                                <i class="bi bi-journal-text me-1"></i> View Ledger
+                            </a>
+                            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('customers.manage'))
+                                <button class="btn btn-sm customer-card-action customer-card-action-secondary" data-bs-toggle="modal"
+                                    data-bs-target="#editPartyModal{{ $contact->id }}" title="Edit Customer">
+                                    <i class="bi bi-pencil me-1"></i> Edit
+                                </button>
                             @endif
                         </div>
                     </div>
