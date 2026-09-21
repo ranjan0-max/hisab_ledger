@@ -1,0 +1,7 @@
+RewriteEngine on
+RewriteCond %{REQUEST_URI} !^public
+RewriteRule ^(.*)$ public/$1 [L]
+
+# BEGIN MilesWeb-ErrorPages
+ErrorDocument 503 /error_pages/503.html
+# END MilesWeb-ErrorPages
