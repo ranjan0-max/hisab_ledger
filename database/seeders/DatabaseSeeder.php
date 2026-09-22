@@ -30,6 +30,18 @@ class DatabaseSeeder extends Seeder
             // Daily Entries
             ['key' => 'daily.view', 'name' => 'View Daily Entries', 'module' => 'daily'],
             ['key' => 'daily.manage', 'name' => 'Manage Daily Entries', 'module' => 'daily'],
+
+            // Warehouses
+            ['key' => 'warehouses.view', 'name' => 'View Warehouses', 'module' => 'warehouses'],
+            ['key' => 'warehouses.manage', 'name' => 'Manage Warehouses', 'module' => 'warehouses'],
+
+            // Warehouse Items
+            ['key' => 'warehouse_items.view', 'name' => 'View Warehouse Items', 'module' => 'warehouse_items'],
+            ['key' => 'warehouse_items.manage', 'name' => 'Manage Warehouse Items', 'module' => 'warehouse_items'],
+
+            // Receipts
+            ['key' => 'receipts.view', 'name' => 'View Receipts', 'module' => 'receipts'],
+            ['key' => 'receipts.manage', 'name' => 'Manage Receipts', 'module' => 'receipts'],
             
             // Users
             ['key' => 'users.view', 'name' => 'View Users', 'module' => 'users'],

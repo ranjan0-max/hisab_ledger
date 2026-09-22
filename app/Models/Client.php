@@ -19,4 +19,6 @@ class Client extends Model
     public function users() { return $this->hasMany(User::class, 'client_id'); }
     public function contacts() { return $this->hasMany(Contact::class, 'client_id'); }
     public function renewalPayments() { return $this->hasMany(ClientRenewalPayment::class, 'client_id'); }
+    public function warehouses() { return $this->hasMany(Warehouse::class, 'client_id'); }
+    public function receipts() { return $this->hasMany(Receipt::class, 'client_id'); }
 }

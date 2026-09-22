@@ -382,6 +382,24 @@
                     </a>
                 @endif
 
+                @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouses.view'))
+                    <a href="{{ route('warehouses.index') }}" class="{{ request()->routeIs('warehouses.*') ? 'active' : '' }}">
+                        <i class="bi bi-buildings-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('warehouses', 'Warehouses') : 'Warehouses' }}
+                    </a>
+                @endif
+
+                @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.view'))
+                    <a href="{{ route('warehouse-items.index') }}" class="{{ request()->routeIs('warehouse-items.*') ? 'active' : '' }}">
+                        <i class="bi bi-box-seam-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('warehouse-items', 'Items') : 'Items' }}
+                    </a>
+                @endif
+
+                @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('receipts.view'))
+                    <a href="{{ route('receipts.index') }}" class="{{ request()->routeIs('receipts.*') ? 'active' : '' }}">
+                        <i class="bi bi-receipt me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('receipts', 'Receipts') : 'Receipts' }}
+                    </a>
+                @endif
+
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('users.view'))
                     <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}">
                         <i class="bi bi-people-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('users', 'Users') : 'Users' }}
@@ -524,6 +542,24 @@
                         @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('daily.view'))
                             <a href="{{ route('daily.index') }}" class="{{ request()->routeIs('daily.*') ? 'active' : '' }}">
                                 <i class="bi bi-journal-check me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('daily', 'Daily Entries') : 'Daily Entries' }}
+                            </a>
+                        @endif
+
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouses.view'))
+                            <a href="{{ route('warehouses.index') }}" class="{{ request()->routeIs('warehouses.*') ? 'active' : '' }}">
+                                <i class="bi bi-buildings-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('warehouses', 'Warehouses') : 'Warehouses' }}
+                            </a>
+                        @endif
+
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.view'))
+                            <a href="{{ route('warehouse-items.index') }}" class="{{ request()->routeIs('warehouse-items.*') ? 'active' : '' }}">
+                                <i class="bi bi-box-seam-fill me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('warehouse-items', 'Items') : 'Items' }}
+                            </a>
+                        @endif
+
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('receipts.view'))
+                            <a href="{{ route('receipts.index') }}" class="{{ request()->routeIs('receipts.*') ? 'active' : '' }}">
+                                <i class="bi bi-receipt me-2"></i> {{ $currentClient ? $currentClient->getMenuLabel('receipts', 'Receipts') : 'Receipts' }}
                             </a>
                         @endif
 

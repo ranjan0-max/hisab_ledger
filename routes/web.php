@@ -13,6 +13,9 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\SlowQueryController;
 use App\Http\Controllers\DatabaseBackupController;
 use App\Http\Controllers\ClientRenewalController;
+use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\WarehouseItemController;
+use App\Http\Controllers\ReceiptController;
 
 // Auth Routes
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -102,6 +105,40 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/daily/{dailyEntry}/payments', [DailyEntryController::class, 'storePayment'])->name('daily.payments.store');
         Route::post('/daily/{dailyEntry}/void', [DailyEntryController::class, 'void'])->name('daily.void');
     });
+
+    // Warehouse Routes
+    Route::middleware(['permission:warehouses.view'])->group(function () {
+        Route::get('/warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
+    });
+    Route::middleware(['permission:warehouses.manage'])->group(function () {
+        Route::post('/warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+        Route::put('/warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
+    });
+
+    // Warehouse Item Routes
+    Route::middleware(['permission:warehouse_items.view'])->group(function () {
+        Route::get('/warehouse-items', [WarehouseItemController::class, 'index'])->name('warehouse-items.index');
+    });
+    Route::middleware(['permission:warehouse_items.manage'])->group(function () {
+        Route::post('/warehouse-items', [WarehouseItemController::class, 'store'])->name('warehouse-items.store');
+        Route::put('/warehouse-items/{warehouseItem}', [WarehouseItemController::class, 'update'])->name('warehouse-items.update');
+    });
+
+    // Receipt Routes
+    Route::middleware(['permission:receipts.view'])->group(function () {
+        Route::get('/receipts', [ReceiptController::class, 'index'])->name('receipts.index');
+        Route::get('/receipts/items/search', [ReceiptController::class, 'searchItems'])->name('receipts.items.search');
+    });
+    Route::middleware(['permission:receipts.manage'])->group(function () {
+        Route::get('/receipts/create', [ReceiptController::class, 'create'])->name('receipts.create');
+        Route::post('/receipts', [ReceiptController::class, 'store'])->name('receipts.store');
+        Route::get('/receipts/{receipt}/edit', [ReceiptController::class, 'edit'])->name('receipts.edit');
+        Route::put('/receipts/{receipt}', [ReceiptController::class, 'update'])->name('receipts.update');
+        Route::delete('/receipts/{receipt}', [ReceiptController::class, 'destroy'])->name('receipts.destroy');
+    });
+    Route::get('/receipts/{receipt}', [ReceiptController::class, 'show'])
+        ->middleware('permission:receipts.view')
+        ->name('receipts.show');
 
     // Audit Logs Routes
     Route::middleware(['permission:audit.view'])->group(function () {
