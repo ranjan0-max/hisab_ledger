@@ -53,6 +53,29 @@ class WarehouseItemController extends Controller
         return redirect()->route('warehouse-items.index')->with('success', 'Item created successfully.');
     }
 
+    public function printList(Request $request)
+    {
+        $user = $request->user();
+        $warehouseExists = Rule::exists('warehouses', 'id');
+
+        if (!$user->isSuperAdmin()) {
+            $warehouseExists->where(fn ($query) => $query->where('client_id', $user->client_id));
+        }
+
+        $validated = $request->validate([
+            'warehouse_id' => ['required', 'integer', $warehouseExists],
+        ]);
+
+        $warehouse = Warehouse::with('client')->findOrFail($validated['warehouse_id']);
+        $this->authorizeWarehouse($warehouse, $user);
+
+        $items = $warehouse->items()
+            ->orderBy('item_name')
+            ->get();
+
+        return view('warehouse-items.print', compact('warehouse', 'items'));
+    }
+
     public function update(Request $request, WarehouseItem $warehouseItem)
     {
         $user = $request->user();
@@ -62,7 +85,6 @@ class WarehouseItemController extends Controller
         $validated = $this->validateItem($request, $user, $warehouseItem);
 
         $warehouseItem->update([
-            'warehouse_id' => $validated['warehouse_id'],
             'item_name' => trim($validated['item_name']),
             'quantity' => $validated['quantity'],
         ]);
@@ -72,15 +94,8 @@ class WarehouseItemController extends Controller
 
     private function validateItem(Request $request, User $user, ?WarehouseItem $warehouseItem = null): array
     {
-        $warehouseId = (int) $request->input('warehouse_id');
-        $warehouseExists = Rule::exists('warehouses', 'id');
-
-        if (!$user->isSuperAdmin()) {
-            $warehouseExists->where(fn ($query) => $query->where('client_id', $user->client_id));
-        }
-
-        return $request->validate([
-            'warehouse_id' => ['required', 'integer', $warehouseExists],
+        $warehouseId = $warehouseItem?->warehouse_id ?? (int) $request->input('warehouse_id');
+        $rules = [
             'item_name' => [
                 'required',
                 'string',
@@ -90,7 +105,19 @@ class WarehouseItemController extends Controller
                     ->ignore($warehouseItem?->id),
             ],
             'quantity' => ['required', 'numeric', 'min:0', 'max:999999999999.999'],
-        ]);
+        ];
+
+        if (!$warehouseItem) {
+            $warehouseExists = Rule::exists('warehouses', 'id');
+
+            if (!$user->isSuperAdmin()) {
+                $warehouseExists->where(fn ($query) => $query->where('client_id', $user->client_id));
+            }
+
+            $rules['warehouse_id'] = ['required', 'integer', $warehouseExists];
+        }
+
+        return $request->validate($rules);
     }
 
     private function availableWarehouses(User $user): Collection

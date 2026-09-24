@@ -21,6 +21,9 @@
         }
         .inventory-mobile-card:active { transform: none; }
         .inventory-mobile-card .card-body { padding: 1rem !important; }
+        .inventory-mobile-row { display: flex; flex-direction: column; gap: 0.65rem; }
+        .inventory-mobile-main { display: flex; overflow: hidden; align-items: center; min-width: 0; gap: 0.5rem; }
+        .inventory-mobile-details { flex: 1 1 auto; min-width: 0; }
         .inventory-mobile-icon {
             display: inline-flex;
             flex: 0 0 38px;
@@ -33,7 +36,7 @@
             color: #2563eb;
             background: #eff6ff;
         }
-        .inventory-mobile-name { color: #0f172a; font-size: 0.94rem; line-height: 1.25; }
+        .inventory-mobile-name { color: #0f172a; font-size: 0.94rem; line-height: 1.3; overflow-wrap: anywhere; white-space: normal; }
         .inventory-mobile-meta { margin-top: 0.18rem; color: #64748b; font-size: 0.71rem; }
         .inventory-quantity {
             display: inline-flex;
@@ -45,8 +48,9 @@
             background: #f0fdf4;
             font-size: 0.72rem;
             font-weight: 700;
+            white-space: nowrap;
         }
-        .inventory-mobile-top-actions { display: flex; flex: 0 0 auto; align-items: flex-start; gap: 0.4rem; }
+        .inventory-mobile-top-actions { display: flex; align-self: flex-end; align-items: center; gap: 0.25rem; }
         .inventory-edit-button { width: 30px; height: 30px; font-size: 0.74rem; }
     }
 </style>
@@ -56,11 +60,16 @@
             <h3 class="fw-bold text-dark mb-1 inventory-page-heading">Warehouse Items</h3>
             <p class="text-muted small mb-0 inventory-page-subtitle">Track item quantities across warehouses</p>
         </div>
-        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.manage'))
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal" @disabled($warehouses->isEmpty())>
-                <i class="bi bi-plus-lg me-1"></i> Add Item
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#printItemsModal" @disabled($warehouses->isEmpty())>
+                <i class="bi bi-printer me-1"></i> Print
             </button>
-        @endif
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.manage'))
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal" @disabled($warehouses->isEmpty())>
+                    <i class="bi bi-plus-lg me-1"></i> Add Item
+                </button>
+            @endif
+        </div>
     </div>
 
     @if($warehouses->isEmpty())
@@ -110,7 +119,9 @@
                                 <td class="text-muted small">{{ $item->updated_at->format('d M Y') }}</td>
                                 <td class="text-end">
                                     @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.manage'))
-                                        <button class="btn btn-sm inventory-edit-button" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->id }}" title="Edit item" aria-label="Edit item"><i class="bi bi-pencil"></i></button>
+                                        <div class="d-inline-flex gap-1">
+                                            <button class="btn btn-sm inventory-edit-button" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->id }}" title="Edit item" aria-label="Edit item"><i class="bi bi-pencil"></i></button>
+                                        </div>
                                     @endif
                                 </td>
                             </tr>
@@ -127,11 +138,11 @@
         @forelse($items as $item)
             <div class="card border-0 shadow-sm mb-3 inventory-mobile-card">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between gap-3">
-                        <div class="d-flex align-items-center gap-2 min-w-0">
+                    <div class="inventory-mobile-row">
+                        <div class="inventory-mobile-main">
                             <span class="inventory-mobile-icon"><i class="bi bi-box-seam"></i></span>
-                            <div class="min-w-0">
-                                <div class="fw-bold text-truncate inventory-mobile-name">{{ $item->item_name }}</div>
+                            <div class="inventory-mobile-details">
+                                <div class="fw-bold inventory-mobile-name">{{ $item->item_name }}</div>
                                 <div class="inventory-mobile-meta text-truncate"><i class="bi bi-building me-1"></i>{{ $item->warehouse->name }}</div>
                                 @if(auth()->user()->isSuperAdmin())<div class="inventory-mobile-meta text-truncate">{{ $item->warehouse->client->name }}</div>@endif
                             </div>
@@ -151,6 +162,32 @@
     </div>
 
     <div class="mt-4">{{ $items->links() }}</div>
+</div>
+
+<div class="modal fade" id="printItemsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="GET" action="{{ route('warehouse-items.print') }}" target="_blank">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Print Warehouse Items</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="printWarehouse" class="form-label">Warehouse <span class="text-danger">*</span></label>
+                    <select name="warehouse_id" id="printWarehouse" class="form-select" required>
+                        <option value="">Select warehouse</option>
+                        @foreach($warehouses as $warehouse)
+                            <option value="{{ $warehouse->id }}">{{ $warehouse->name }}{{ auth()->user()->isSuperAdmin() ? ' — '.$warehouse->client->name : '' }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-printer me-1"></i> Print</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.manage'))
@@ -179,7 +216,7 @@
                         @csrf @method('PUT')
                         <div class="modal-header"><h5 class="modal-title fw-bold">Edit Warehouse Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                         <div class="modal-body">
-                            <div class="mb-3"><label class="form-label">Warehouse <span class="text-danger">*</span></label><select name="warehouse_id" class="form-select" required>@foreach($warehouses as $warehouse)<option value="{{ $warehouse->id }}" @selected($item->warehouse_id === $warehouse->id)>{{ $warehouse->name }}{{ auth()->user()->isSuperAdmin() ? ' — '.$warehouse->client->name : '' }}</option>@endforeach</select></div>
+                            <div class="mb-3"><label class="form-label">Warehouse</label><input type="text" class="form-control bg-light" value="{{ $item->warehouse->name }}{{ auth()->user()->isSuperAdmin() ? ' — '.$item->warehouse->client->name : '' }}" readonly></div>
                             <div class="mb-3"><label class="form-label">Item Name <span class="text-danger">*</span></label><input type="text" name="item_name" class="form-control" maxlength="150" value="{{ $item->item_name }}" required></div>
                             <div><label class="form-label">Quantity <span class="text-danger">*</span></label><input type="number" name="quantity" class="form-control" min="0" max="999999999999.999" step="0.001" value="{{ $item->quantity }}" required></div>
                         </div>
@@ -189,5 +226,6 @@
             </div>
         </div>
     @endforeach
+
 @endif
 @endsection

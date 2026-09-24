@@ -59,7 +59,7 @@ class ReceiptController extends Controller
             ? session('active_client_id')
             : $user->client_id;
 
-        return view('receipts.form', [
+        return view($request->boolean('modal') ? 'receipts.form-modal' : 'receipts.form', [
             'receipt' => null,
             'clients' => $this->availableClients($user),
             'warehouses' => $this->availableWarehouses($user),
@@ -73,7 +73,15 @@ class ReceiptController extends Controller
         $this->authorizeReceipt($receipt, $request->user());
         $receipt->load(['client', 'createdBy', 'items.warehouseItem.warehouse']);
 
-        return view('receipts.show', compact('receipt'));
+        return view($request->boolean('modal') ? 'receipts.show-modal' : 'receipts.show', compact('receipt'));
+    }
+
+    public function printReceipt(Request $request, Receipt $receipt): View
+    {
+        $this->authorizeReceipt($receipt, $request->user());
+        $receipt->load(['items.warehouseItem.warehouse']);
+
+        return view('receipts.print', compact('receipt'));
     }
 
     public function store(Request $request)
@@ -85,7 +93,7 @@ class ReceiptController extends Controller
             : (int) $user->client_id;
 
         $receipt = DB::transaction(function () use ($validated, $clientId, $user) {
-            $lines = $this->normalizedLines($validated['items']);
+            $lines = $this->normalizedLines($validated['items'], (int) $validated['warehouse_id']);
             $stockItems = $this->lockedStockItems($lines->pluck('warehouse_item_id'));
             $this->validateLineOwnershipAndStock($lines, $stockItems, $clientId);
 
@@ -110,7 +118,15 @@ class ReceiptController extends Controller
             return $receipt;
         });
 
-        return redirect()->route('receipts.index')->with('success', "Receipt {$receipt->number} created and stock updated successfully.");
+        $message = "Receipt {$receipt->number} created and stock updated successfully.";
+
+        if ($request->ajax()) {
+            session()->flash('success', $message);
+
+            return response()->json(['redirect' => route('receipts.index')]);
+        }
+
+        return redirect()->route('receipts.index')->with('success', $message);
     }
 
     public function edit(Request $request, Receipt $receipt): View
@@ -119,7 +135,7 @@ class ReceiptController extends Controller
         $this->authorizeReceipt($receipt, $user);
         $receipt->load(['items.warehouseItem.warehouse']);
 
-        return view('receipts.form', [
+        return view($request->boolean('modal') ? 'receipts.form-modal' : 'receipts.form', [
             'receipt' => $receipt,
             'clients' => collect(),
             'warehouses' => Warehouse::where('client_id', $receipt->client_id)->orderBy('name')->get(),
@@ -137,7 +153,7 @@ class ReceiptController extends Controller
         DB::transaction(function () use ($validated, $receipt) {
             $lockedReceipt = Receipt::whereKey($receipt->id)->lockForUpdate()->firstOrFail();
             $oldLines = ReceiptItem::where('receipt_id', $lockedReceipt->id)->get();
-            $newLines = $this->normalizedLines($validated['items']);
+            $newLines = $this->normalizedLines($validated['items'], (int) $validated['warehouse_id']);
 
             $itemIds = $oldLines->pluck('warehouse_item_id')
                 ->merge($newLines->pluck('warehouse_item_id'))
@@ -172,7 +188,15 @@ class ReceiptController extends Controller
             }
         });
 
-        return redirect()->route('receipts.index')->with('success', "Receipt {$receipt->number} updated and stock adjusted successfully.");
+        $message = "Receipt {$receipt->number} updated and stock adjusted successfully.";
+
+        if ($request->ajax()) {
+            session()->flash('success', $message);
+
+            return response()->json(['redirect' => route('receipts.index')]);
+        }
+
+        return redirect()->route('receipts.index')->with('success', $message);
     }
 
     public function destroy(Request $request, Receipt $receipt)
@@ -227,6 +251,24 @@ class ReceiptController extends Controller
 
     private function validateReceipt(Request $request, User $user, ?Receipt $receipt = null): array
     {
+        $warehouseRules = ['required', 'integer', 'exists:warehouses,id'];
+
+        if ($receipt) {
+            $originalWarehouseIds = $receipt->items()
+                ->with('warehouseItem:id,warehouse_id')
+                ->get()
+                ->pluck('warehouseItem.warehouse_id')
+                ->unique();
+
+            if ($originalWarehouseIds->count() !== 1) {
+                throw ValidationException::withMessages([
+                    'warehouse_id' => 'This receipt does not have a single original warehouse and cannot be updated.',
+                ]);
+            }
+
+            $warehouseRules[] = Rule::in([(int) $originalWarehouseIds->first()]);
+        }
+
         return $request->validate([
             'client_id' => [
                 $user->isSuperAdmin() && !$receipt ? 'required' : 'nullable',
@@ -234,17 +276,17 @@ class ReceiptController extends Controller
                 Rule::exists('clients', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
             'customer_name' => ['required', 'string', 'max:150'],
+            'warehouse_id' => $warehouseRules,
             'items' => ['required', 'array', 'min:1'],
-            'items.*.warehouse_id' => ['required', 'integer', 'exists:warehouses,id'],
             'items.*.warehouse_item_id' => ['required', 'integer', 'distinct', 'exists:items_in_warehouses,id'],
             'items.*.quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001', 'max:999999999999.999'],
         ]);
     }
 
-    private function normalizedLines(array $items): Collection
+    private function normalizedLines(array $items, int $warehouseId): Collection
     {
         return collect($items)->map(fn (array $line) => [
-            'warehouse_id' => (int) $line['warehouse_id'],
+            'warehouse_id' => $warehouseId,
             'warehouse_item_id' => (int) $line['warehouse_item_id'],
             'quantity' => $this->decimal($line['quantity']),
         ]);

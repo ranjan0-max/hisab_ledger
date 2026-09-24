@@ -118,6 +118,7 @@ Route::middleware(['auth'])->group(function () {
     // Warehouse Item Routes
     Route::middleware(['permission:warehouse_items.view'])->group(function () {
         Route::get('/warehouse-items', [WarehouseItemController::class, 'index'])->name('warehouse-items.index');
+        Route::get('/warehouse-items/print', [WarehouseItemController::class, 'printList'])->name('warehouse-items.print');
     });
     Route::middleware(['permission:warehouse_items.manage'])->group(function () {
         Route::post('/warehouse-items', [WarehouseItemController::class, 'store'])->name('warehouse-items.store');
@@ -128,6 +129,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['permission:receipts.view'])->group(function () {
         Route::get('/receipts', [ReceiptController::class, 'index'])->name('receipts.index');
         Route::get('/receipts/items/search', [ReceiptController::class, 'searchItems'])->name('receipts.items.search');
+        Route::get('/receipts/{receipt}/print', [ReceiptController::class, 'printReceipt'])->name('receipts.print');
     });
     Route::middleware(['permission:receipts.manage'])->group(function () {
         Route::get('/receipts/create', [ReceiptController::class, 'create'])->name('receipts.create');
