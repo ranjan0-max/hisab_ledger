@@ -33,6 +33,7 @@
     .item-result { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: .65rem .75rem; border: 0; border-bottom: 1px solid #f1f5f9; color: #334155; background: #fff; text-align: left; }
     .item-result:last-child { border-bottom: 0; }
     .item-result:hover { background: #f8fafc; }
+    .item-result.active { background: #eef2ff; }
     .item-result-stock { color: #15803d; font-size: .7rem; font-weight: 700; white-space: nowrap; }
     .remove-line { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 34px; padding: 0; border: 0; border-radius: 6px; color: #94a3b8; background: transparent; }
     .remove-line:hover { color: #dc2626; background: #fef2f2; }
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
             items.forEach(item => {
                 const button = document.createElement('button');
                 button.type = 'button';
+                button.tabIndex = -1;
                 button.className = 'item-result';
                 button.innerHTML = `<span>${escapeHtml(item.text)}</span><span class="item-result-stock">${escapeHtml(item.quantity)} available</span>`;
                 button.addEventListener('click', () => {
@@ -246,6 +248,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     linesContainer.addEventListener('focusin', event => {
         if (event.target.classList.contains('item-search')) searchItems(event.target.closest('.receipt-line'));
+    });
+
+    linesContainer.addEventListener('keydown', async event => {
+        if (event.target.classList.contains('item-search') && ['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) {
+            event.preventDefault();
+            const row = event.target.closest('.receipt-line');
+            const results = row.querySelector('.item-results');
+
+            if (results.classList.contains('d-none') && event.key !== 'Enter') await searchItems(row);
+
+            const options = Array.from(results.querySelectorAll('.item-result'));
+            const activeIndex = options.findIndex(option => option.classList.contains('active'));
+
+            if (event.key === 'Enter') {
+                if (activeIndex >= 0) options[activeIndex].click();
+                return;
+            }
+
+            if (!options.length) return;
+            const nextIndex = event.key === 'ArrowDown'
+                ? (activeIndex + 1) % options.length
+                : (activeIndex <= 0 ? options.length - 1 : activeIndex - 1);
+            options.forEach(option => option.classList.remove('active'));
+            options[nextIndex].classList.add('active');
+            options[nextIndex].scrollIntoView({ block: 'nearest' });
+            return;
+        }
+
+        if (event.key === 'Enter' && event.target.classList.contains('quantity-input')) {
+            event.preventDefault();
+            if (event.target.value !== '') document.getElementById('addReceiptLine').click();
+        }
     });
 
     linesContainer.addEventListener('click', event => {

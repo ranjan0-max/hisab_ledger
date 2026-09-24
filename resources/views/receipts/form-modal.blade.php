@@ -28,6 +28,7 @@
     .receipt-modal-result { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: .65rem .75rem; border: 0; border-bottom: 1px solid #f1f5f9; color: #334155; background: #fff; text-align: left; }
     .receipt-modal-result:last-child { border-bottom: 0; }
     .receipt-modal-result:hover { background: #f8fafc; }
+    .receipt-modal-result.active { background: #eef2ff; }
     .receipt-modal-result-stock { color: #15803d; font-size: .7rem; font-weight: 700; white-space: nowrap; }
     .receipt-modal-remove { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 34px; padding: 0; border: 0; border-radius: 6px; color: #94a3b8; background: transparent; }
     .receipt-modal-remove:hover { color: #dc2626; background: #fef2f2; }
@@ -162,6 +163,7 @@
         items.forEach(item => {
             const button = document.createElement('button');
             button.type = 'button';
+            button.tabIndex = -1;
             button.className = 'receipt-modal-result';
             button.innerHTML = `<span>${escapeHtml(item.text)}</span><span class="receipt-modal-result-stock">${escapeHtml(item.quantity)} available</span>`;
             button.addEventListener('click', () => {
@@ -202,6 +204,37 @@
     });
     lines.addEventListener('focusin', event => {
         if (event.target.classList.contains('receipt-modal-search')) searchItems(event.target.closest('.receipt-modal-line'));
+    });
+    lines.addEventListener('keydown', async event => {
+        if (event.target.classList.contains('receipt-modal-search') && ['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) {
+            event.preventDefault();
+            const row = event.target.closest('.receipt-modal-line');
+            const results = row.querySelector('.receipt-modal-results');
+
+            if (results.classList.contains('d-none') && event.key !== 'Enter') await searchItems(row);
+
+            const options = Array.from(results.querySelectorAll('.receipt-modal-result'));
+            const activeIndex = options.findIndex(option => option.classList.contains('active'));
+
+            if (event.key === 'Enter') {
+                if (activeIndex >= 0) options[activeIndex].click();
+                return;
+            }
+
+            if (!options.length) return;
+            const nextIndex = event.key === 'ArrowDown'
+                ? (activeIndex + 1) % options.length
+                : (activeIndex <= 0 ? options.length - 1 : activeIndex - 1);
+            options.forEach(option => option.classList.remove('active'));
+            options[nextIndex].classList.add('active');
+            options[nextIndex].scrollIntoView({ block: 'nearest' });
+            return;
+        }
+
+        if (event.key === 'Enter' && event.target.classList.contains('receipt-modal-quantity')) {
+            event.preventDefault();
+            if (event.target.value !== '') document.getElementById('addReceiptModalLine').click();
+        }
     });
     lines.addEventListener('click', event => {
         const remove = event.target.closest('.receipt-modal-remove');
