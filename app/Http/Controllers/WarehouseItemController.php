@@ -7,7 +7,9 @@ use App\Models\Warehouse;
 use App\Models\WarehouseItem;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class WarehouseItemController extends Controller
 {
@@ -90,6 +92,38 @@ class WarehouseItemController extends Controller
         ]);
 
         return redirect()->route('warehouse-items.index')->with('success', 'Item updated successfully.');
+    }
+
+    public function addQuantity(Request $request, WarehouseItem $warehouseItem)
+    {
+        $user = $request->user();
+        $warehouseItem->loadMissing('warehouse');
+        $this->authorizeWarehouse($warehouseItem->warehouse, $user);
+
+        $validated = $request->validate([
+            'quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001', 'max:999999999999.999'],
+        ]);
+
+        DB::transaction(function () use ($validated, $warehouseItem, $user) {
+            $lockedItem = WarehouseItem::with('warehouse')
+                ->whereKey($warehouseItem->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->authorizeWarehouse($lockedItem->warehouse, $user);
+
+            $newQuantity = bcadd($lockedItem->quantity, (string) $validated['quantity'], 3);
+
+            if (bccomp($newQuantity, '999999999999.999', 3) === 1) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'The resulting quantity exceeds the maximum allowed stock.',
+                ]);
+            }
+
+            $lockedItem->update(['quantity' => $newQuantity]);
+        });
+
+        return redirect()->route('warehouse-items.index')->with('success', 'Quantity added successfully.');
     }
 
     private function validateItem(Request $request, User $user, ?WarehouseItem $warehouseItem = null): array

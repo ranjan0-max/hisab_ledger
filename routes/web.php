@@ -122,6 +122,7 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::middleware(['permission:warehouse_items.manage'])->group(function () {
         Route::post('/warehouse-items', [WarehouseItemController::class, 'store'])->name('warehouse-items.store');
+        Route::patch('/warehouse-items/{warehouseItem}/quantity', [WarehouseItemController::class, 'addQuantity'])->name('warehouse-items.quantity.add');
         Route::put('/warehouse-items/{warehouseItem}', [WarehouseItemController::class, 'update'])->name('warehouse-items.update');
     });
 

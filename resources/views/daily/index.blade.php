@@ -2,6 +2,31 @@
 
 @section('content')
 <style>
+    .daily-payment-modal .modal-content,
+    .daily-payment-modal .modal-content > form {
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .daily-payment-modal .modal-content > form {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - (var(--bs-modal-margin) * 2));
+        max-height: calc(100dvh - (var(--bs-modal-margin) * 2));
+    }
+
+    .daily-payment-modal .modal-header,
+    .daily-payment-modal .modal-footer {
+        flex: 0 0 auto;
+    }
+
+    .daily-payment-modal .modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
     @media (max-width: 767.98px) {
         .daily-mobile-card {
             border: 1px solid #e2e8f0 !important;
@@ -175,26 +200,11 @@
             height: 100% !important;
             max-height: 100% !important;
             min-height: 0 !important;
-            overflow: hidden !important;
-        }
-
-        .daily-payment-modal .modal-content > form {
-            display: flex !important;
-            flex-direction: column;
-        }
-
-        .daily-payment-modal .modal-header,
-        .daily-payment-modal .modal-footer {
-            flex: 0 0 auto;
         }
 
         .daily-payment-modal .modal-body {
-            flex: 1 1 auto;
             height: auto !important;
             max-height: none !important;
-            min-height: 0 !important;
-            overflow-x: hidden !important;
-            overflow-y: auto !important;
             overscroll-behavior: contain;
             touch-action: pan-y;
             -webkit-overflow-scrolling: touch;

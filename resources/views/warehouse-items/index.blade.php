@@ -7,6 +7,7 @@
         box-shadow: 0 5px 18px rgba(15, 23, 42, 0.04) !important;
     }
     .inventory-edit-button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border-color: #c7d2fe; border-radius: 8px; color: #4338ca; background: #eef2ff; }
+    .inventory-add-quantity-button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border-color: #bbf7d0; border-radius: 8px; color: #15803d; background: #f0fdf4; }
 
     @media (max-width: 767.98px) {
         .inventory-page-heading { font-size: 1.3rem; }
@@ -51,7 +52,7 @@
             white-space: nowrap;
         }
         .inventory-mobile-top-actions { display: flex; align-self: flex-end; align-items: center; gap: 0.25rem; }
-        .inventory-edit-button { width: 30px; height: 30px; font-size: 0.74rem; }
+        .inventory-edit-button, .inventory-add-quantity-button { width: 30px; height: 30px; font-size: 0.74rem; }
     }
 </style>
 <div class="container-fluid">
@@ -120,6 +121,7 @@
                                 <td class="text-end">
                                     @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.manage'))
                                         <div class="d-inline-flex gap-1">
+                                            <button class="btn btn-sm inventory-add-quantity-button" data-bs-toggle="modal" data-bs-target="#addItemQuantityModal{{ $item->id }}" title="Add quantity" aria-label="Add quantity to {{ $item->item_name }}"><i class="bi bi-plus-lg"></i></button>
                                             <button class="btn btn-sm inventory-edit-button" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->id }}" title="Edit item" aria-label="Edit item"><i class="bi bi-pencil"></i></button>
                                         </div>
                                     @endif
@@ -150,6 +152,7 @@
                         <div class="inventory-mobile-top-actions">
                             <span class="inventory-quantity">{{ rtrim(rtrim(number_format((float) $item->quantity, 3, '.', ''), '0'), '.') }}</span>
                             @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('warehouse_items.manage'))
+                                <button class="btn btn-sm inventory-add-quantity-button" data-bs-toggle="modal" data-bs-target="#addItemQuantityModal{{ $item->id }}" title="Add quantity" aria-label="Add quantity to {{ $item->item_name }}"><i class="bi bi-plus-lg"></i></button>
                                 <button class="btn btn-sm inventory-edit-button" data-bs-toggle="modal" data-bs-target="#editItemModal{{ $item->id }}" title="Edit item" aria-label="Edit item"><i class="bi bi-pencil"></i></button>
                             @endif
                         </div>
@@ -209,6 +212,24 @@
     </div>
 
     @foreach($items as $item)
+        <div class="modal fade inventory-form-modal" id="addItemQuantityModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('warehouse-items.quantity.add', $item) }}">
+                        @csrf @method('PATCH')
+                        <div class="modal-header"><h5 class="modal-title fw-bold">Add Item Quantity</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                            <div class="mb-3"><label class="form-label">Item</label><input type="text" class="form-control bg-light" value="{{ $item->item_name }}" readonly></div>
+                            <div class="mb-3"><label class="form-label">Warehouse</label><input type="text" class="form-control bg-light" value="{{ $item->warehouse->name }}{{ auth()->user()->isSuperAdmin() ? ' â€” '.$item->warehouse->client->name : '' }}" readonly></div>
+                            <div class="mb-3"><label class="form-label">Current Quantity</label><input type="text" class="form-control bg-light" value="{{ rtrim(rtrim(number_format((float) $item->quantity, 3, '.', ''), '0'), '.') }}" readonly></div>
+                            <div><label class="form-label">Quantity to Add <span class="text-danger">*</span></label><input type="number" name="quantity" class="form-control" min="0.001" max="999999999999.999" step="0.001" placeholder="0.000" required></div>
+                        </div>
+                        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success text-white" type="submit"><i class="bi bi-plus-circle me-1"></i>Add Quantity</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <div class="modal fade inventory-form-modal" id="editItemModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
