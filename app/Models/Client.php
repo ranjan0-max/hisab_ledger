@@ -4,9 +4,10 @@ use Illuminate\Database\Eloquent\Model;
 class Client extends Model
 {
     protected $table = 'clients';
-    protected $fillable = ['name', 'menu_labels', 'address', 'mobile_number', 'gst_number', 'notes', 'is_active', 'session_timeout_minutes', 'next_renewal_date'];
+    protected $fillable = ['name', 'menu_labels', 'khata_number_enabled', 'address', 'mobile_number', 'gst_number', 'notes', 'is_active', 'session_timeout_minutes', 'next_renewal_date'];
     protected $casts = [
         'is_active' => 'boolean',
+        'khata_number_enabled' => 'boolean',
         'menu_labels' => 'array',
         'session_timeout_minutes' => 'integer',
         'next_renewal_date' => 'date',

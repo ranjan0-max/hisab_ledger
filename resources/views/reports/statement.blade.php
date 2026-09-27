@@ -126,7 +126,9 @@
         <tr>
             <td class="info-cell" style="width: 60%;">
                 <div class="party-name">{{ $contact->name }}</div>
-                <div><strong>Khata No:</strong> <span class="badge">#{{ $contact->khata_number }}</span></div>
+                @if($contact->khata_number !== null)
+                    <div><strong>Khata No:</strong> <span class="badge">#{{ $contact->khata_number }}</span></div>
+                @endif
                 <div><strong>Type:</strong> {{ $contact->type === 'REGULAR_CUSTOMER' ? 'Customer' : 'Supplier' }}</div>
                 @if($contact->phoneNumbers->first())
                     <div><strong>Mobile:</strong> {{ $contact->phoneNumbers->first()->phone_number }}</div>

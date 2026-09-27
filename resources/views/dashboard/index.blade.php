@@ -207,7 +207,7 @@
                             <tr>
                                 <td>{{ $tx->transaction_date->format('d M Y') }}</td>
                                 <td class="fw-semibold">{{ $tx->contact->name ?? 'N/A' }}</td>
-                                <td>{{ $tx->contact->khata_number ?? 'N/A' }}</td>
+                                <td>{{ $tx->contact?->khata_number }}</td>
                                 <td>
                                     <span class="badge bg-secondary-subtle text-dark border border-secondary-subtle">{{ $tx->transaction_type }}</span>
                                 </td>
@@ -237,8 +237,10 @@
                         </div>
                     </div>
                     <div class="transaction-meta">
-                        <span class="transaction-khata">Khata #{{ $tx->contact->khata_number ?? 'N/A' }}</span>
-                        <span class="transaction-meta-separator">&bull;</span>
+                        @if($tx->contact?->khata_number !== null)
+                            <span class="transaction-khata">Khata #{{ $tx->contact->khata_number }}</span>
+                            <span class="transaction-meta-separator">&bull;</span>
+                        @endif
                         <span><i class="bi bi-calendar3 me-1"></i>{{ $tx->transaction_date->format('d M Y') }}</span>
                     </div>
                     <div class="transaction-card-footer">

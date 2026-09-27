@@ -17,6 +17,7 @@ class KhataNumberService
             ->where('client_id', $clientId)
             ->where('type', $type)
             ->where('is_active', true)
+            ->whereNotNull('khata_number')
             ->orderBy('khata_number')
             ->pluck('khata_number')
             ->map(fn ($number) => (int) $number);

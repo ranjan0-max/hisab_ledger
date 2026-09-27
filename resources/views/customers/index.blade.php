@@ -375,7 +375,7 @@
                         <tbody>
                             @forelse($contacts as $contact)
                                 <tr>
-                                    <td class="fw-bold text-primary">{{ $contact->khata_number }}</td>
+                                    <td class="fw-bold text-primary">{{ $contact->khata_number ?? '—' }}</td>
                                     <td class="fw-semibold">{{ $contact->name }}</td>
                                     <td>{{ $contact->phoneNumbers->first()->phone_number ?? '—' }}</td>
                                     <td>
@@ -427,7 +427,9 @@
                         <div class="d-flex justify-content-between align-items-start gap-3">
                             <div class="min-w-0">
                                 <h5 class="customer-card-name fw-bold mb-0 text-break">{{ $contact->name }}</h5>
-                                <div class="customer-khata">Khata #{{ $contact->khata_number }}</div>
+                                @if($contact->khata_number !== null)
+                                    <div class="customer-khata">Khata #{{ $contact->khata_number }}</div>
+                                @endif
                             </div>
                             <div class="customer-balance">
                                 @if($contact->current_balance < 0)
@@ -473,7 +475,8 @@
 
     <!-- Add Modal -->
     <div class="modal fade customer-form-modal" id="addPartyModal" tabindex="-1"
-        data-khata-url="{{ route('khata-numbers.available', [], false) }}" data-party-type="REGULAR_CUSTOMER">
+        data-khata-url="{{ route('khata-numbers.available', [], false) }}" data-party-type="REGULAR_CUSTOMER"
+        data-khata-enabled="{{ auth()->user()->isSuperAdmin() ? '' : (auth()->user()->client?->khata_number_enabled ? '1' : '0') }}">
         <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content">
                 <form method="POST" action="{{ route('customers.store') }}">
@@ -490,7 +493,7 @@
                                 <select name="client_id" class="form-select" data-client-select required>
                                     <option value="">-- Select Client / Shop --</option>
                                     @foreach(\App\Models\Client::where('is_active', true)->get() as $client)
-                                        <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->name }}</option>
+                                        <option value="{{ $client->id }}" data-khata-enabled="{{ $client->khata_number_enabled ? '1' : '0' }}" @selected((string) old('client_id') === (string) $client->id)>{{ $client->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -499,10 +502,10 @@
                             <label class="form-label">Customer Name *</label>
                             <input type="text" name="name" class="form-control" required>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 {{ auth()->user()->isSuperAdmin() || !auth()->user()->client?->khata_number_enabled ? 'd-none' : '' }}" data-khata-field>
                             <label class="form-label">Khata Number *</label>
                             <select name="khata_number" class="form-select" data-khata-number-select
-                                data-selected-number="{{ old('khata_number') }}" required disabled>
+                                data-selected-number="{{ old('khata_number') }}" disabled>
                                 <option value="">Open the form to load available numbers...</option>
                             </select>
                             {{-- <div class="form-text">Available inactive numbers and the next 20 new numbers are shown.
@@ -590,11 +593,13 @@
                                 <label class="form-label">Customer Name *</label>
                                 <input type="text" name="name" class="form-control" value="{{ $contact->name }}" required>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Khata Number *</label>
-                                <input type="number" name="khata_number" class="form-control"
-                                    value="{{ $contact->khata_number }}" min="1" step="1" inputmode="numeric" required>
-                            </div>
+                            @if($contact->client?->khata_number_enabled)
+                                <div class="mb-3">
+                                    <label class="form-label">Khata Number *</label>
+                                    <input type="number" name="khata_number" class="form-control"
+                                        value="{{ $contact->khata_number }}" min="1" step="1" inputmode="numeric" required>
+                                </div>
+                            @endif
                             @php
                                 $editablePhones = $contact->phoneNumbers->values();
                             @endphp
@@ -695,6 +700,7 @@
             if (addCustomerModal) {
                 const khataSelect = addCustomerModal.querySelector('[data-khata-number-select]');
                 const clientSelect = addCustomerModal.querySelector('[data-client-select]');
+                const khataField = addCustomerModal.querySelector('[data-khata-field]');
                 let activeRequest = null;
 
                 function showKhataStatus(message, disabled = true) {
@@ -717,13 +723,29 @@
 
                 async function loadAvailableKhataNumbers() {
                     const clientId = clientSelect ? clientSelect.value : '';
+                    const khataEnabled = clientSelect
+                        ? clientSelect.selectedOptions[0]?.dataset.khataEnabled === '1'
+                        : addCustomerModal.dataset.khataEnabled === '1';
+
+                    if (activeRequest) {
+                        activeRequest.abort();
+                        activeRequest = null;
+                    }
 
                     if (clientSelect && !clientId) {
+                        khataField.classList.add('d-none');
+                        khataSelect.required = false;
                         showKhataStatus('Select a client / shop first');
                         return;
                     }
 
-                    if (activeRequest) activeRequest.abort();
+                    khataField.classList.toggle('d-none', !khataEnabled);
+                    khataSelect.required = khataEnabled;
+                    if (!khataEnabled) {
+                        showKhataStatus('Khata Number is disabled for this client / shop');
+                        return;
+                    }
+
                     activeRequest = new AbortController();
                     showKhataStatus('Loading available numbers...');
 

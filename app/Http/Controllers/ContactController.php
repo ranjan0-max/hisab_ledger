@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
 use App\Models\Contact;
 use App\Models\ContactPhoneNumber;
 use App\Models\LedgerTransaction;
@@ -42,6 +43,9 @@ class ContactController extends Controller
 
         abort_if($clientId < 1, 422, 'A client/shop must be selected.');
 
+        $client = Client::findOrFail($clientId);
+        abort_unless($client->khata_number_enabled, 422, 'Khata Number is disabled for this client/shop.');
+
         return response()
             ->json($this->khataNumberService->availableFor($clientId, $validated['type']))
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -60,7 +64,7 @@ class ContactController extends Controller
     private function index(Request $request, string $type)
     {
         $user = auth()->user();
-        $query = Contact::with('phoneNumbers')->where('contacts.type', $type);
+        $query = Contact::with(['phoneNumbers', 'client'])->where('contacts.type', $type);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -131,7 +135,7 @@ class ContactController extends Controller
             abort(403);
         }
 
-        $contact->load('phoneNumbers');
+        $contact->load(['phoneNumbers', 'client']);
 
         // Plain transaction fetch — no PHP loop, no running_balance per row
         $transactions = LedgerTransaction::where('contact_id', $contact->id)
@@ -168,11 +172,12 @@ class ContactController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
+        $khataNumberEnabled = $this->khataNumberEnabledForRequest($request, $user);
 
         $validated = $request->validate([
             'type' => ['required', 'in:REGULAR_CUSTOMER,SUPPLIER'],
             'name' => ['required', 'string', 'max:150'],
-            'khata_number' => ['required', 'integer', 'min:1'],
+            'khata_number' => [$khataNumberEnabled ? 'required' : 'nullable', 'integer', 'min:1'],
             'phone_number' => ['nullable', 'string', 'max:20'],
             'phone_numbers' => ['nullable', 'array', 'max:5'],
             'phone_numbers.*' => ['nullable', 'string', 'max:20'],
@@ -185,20 +190,23 @@ class ContactController extends Controller
             'client_id' => [$user->isSuperAdmin() ? 'required' : 'nullable', 'exists:clients,id'],
         ]);
 
-        $clientId = $user->isSuperAdmin() ? $validated['client_id'] : $user->client_id;
-        $khataNumber = (int) $validated['khata_number'];
+        $clientId = (int) ($user->isSuperAdmin() ? $validated['client_id'] : $user->client_id);
+        $khataNumber = $khataNumberEnabled ? (int) $validated['khata_number'] : null;
 
         // Custom Validation Rule: Active Party (Customer/Supplier) Khata Number uniqueness check
-        $existingParty = Contact::where('contacts.type', $validated['type'])
-            ->where('contacts.is_active', true)
-            ->where('contacts.khata_number', $khataNumber)
-            ->first();
+        if ($khataNumber !== null) {
+            $existingParty = Contact::where('contacts.client_id', $clientId)
+                ->where('contacts.type', $validated['type'])
+                ->where('contacts.is_active', true)
+                ->where('contacts.khata_number', $khataNumber)
+                ->first();
 
-        if ($existingParty) {
-            $partyLabel = $validated['type'] === 'REGULAR_CUSTOMER' ? 'customer' : 'supplier';
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "Khata Number {$khataNumber} is already assigned to active {$partyLabel} \"{$existingParty->name}\". Deactivate that {$partyLabel} or use a different Khata Number.");
+            if ($existingParty) {
+                $partyLabel = $validated['type'] === 'REGULAR_CUSTOMER' ? 'customer' : 'supplier';
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Khata Number {$khataNumber} is already assigned to active {$partyLabel} \"{$existingParty->name}\". Deactivate that {$partyLabel} or use a different Khata Number.");
+            }
         }
 
         $contact = Contact::create([
@@ -241,9 +249,12 @@ class ContactController extends Controller
             abort(403);
         }
 
+        $contact->loadMissing('client');
+        $khataNumberEnabled = (bool) ($contact->client?->khata_number_enabled ?? true);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'khata_number' => ['required', 'integer', 'min:1'],
+            'khata_number' => [$khataNumberEnabled ? 'required' : 'nullable', 'integer', 'min:1'],
             'phone_number' => ['nullable', 'string', 'max:20'],
             'phone_numbers' => ['nullable', 'array', 'max:5'],
             'phone_numbers.*' => ['nullable', 'string', 'max:20'],
@@ -255,11 +266,14 @@ class ContactController extends Controller
         ]);
 
         $isActive = $request->has('is_active');
-        $khataNumber = (int) $validated['khata_number'];
+        $khataNumber = $khataNumberEnabled
+            ? (int) $validated['khata_number']
+            : $contact->khata_number;
 
         // Custom Validation Rule: Active Party (Customer/Supplier) Khata Number uniqueness check
-        if ($isActive) {
-            $existingParty = Contact::where('contacts.type', $contact->type)
+        if ($isActive && $khataNumber !== null) {
+            $existingParty = Contact::where('contacts.client_id', $contact->client_id)
+                ->where('contacts.type', $contact->type)
                 ->where('contacts.is_active', true)
                 ->where('contacts.khata_number', $khataNumber)
                 ->where('contacts.id', '!=', $contact->id)
@@ -304,6 +318,20 @@ class ContactController extends Controller
         }
 
         return redirect()->back()->with('success', 'Party updated successfully.');
+    }
+
+    private function khataNumberEnabledForRequest(Request $request, $user): bool
+    {
+        if (!$user->isSuperAdmin()) {
+            return (bool) ($user->client?->khata_number_enabled ?? true);
+        }
+
+        $clientId = (int) $request->input('client_id');
+        if ($clientId < 1) {
+            return true;
+        }
+
+        return (bool) (Client::whereKey($clientId)->value('khata_number_enabled') ?? true);
     }
 
     private function syncPhoneNumbers(Contact $contact, array $phoneNumbers, ?int $primaryIndex): void
@@ -399,6 +427,8 @@ class ContactController extends Controller
 
         $pdf = Pdf::loadView('reports.statement', compact('contact', 'transactions', 'fromDate', 'toDate', 'currentBalance', 'openingBalance'));
 
-        return $pdf->download("Statement_{$contact->name}_{$contact->khata_number}.pdf");
+        $khataSuffix = $contact->khata_number !== null ? "_{$contact->khata_number}" : '';
+
+        return $pdf->download("Statement_{$contact->name}{$khataSuffix}.pdf");
     }
 }

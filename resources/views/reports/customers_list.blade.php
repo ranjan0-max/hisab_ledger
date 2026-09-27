@@ -120,7 +120,7 @@
         <tbody>
             @forelse($exportContacts as $contact)
                 <tr>
-                    <td class="fw-bold">#{{ $contact->khata_number }}</td>
+                    <td class="fw-bold">{{ $contact->khata_number !== null ? '#'.$contact->khata_number : '' }}</td>
                     <td class="fw-bold">{{ $contact->name }}</td>
                     <td>{{ $contact->phoneNumbers->first()->phone_number ?? '—' }}</td>
                     <td>{{ $contact->address ?? '—' }}</td>

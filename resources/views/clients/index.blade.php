@@ -419,10 +419,14 @@
                             <label class="form-label">GST Number</label>
                             <input type="text" name="gst_number" class="form-control">
                         </div>
-                        <div class="col-12 col-lg-6 d-flex align-items-end">
+                        <div class="col-12 col-lg-6 d-flex flex-column justify-content-end align-items-start">
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="addActive" checked>
                                 <label class="form-check-label" for="addActive">Active</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="khata_number_enabled" value="1" id="addKhataNumberEnabled" checked>
+                                <label class="form-check-label" for="addKhataNumberEnabled">Enable Khata Number</label>
                             </div>
                         </div>
                     </div>
@@ -553,10 +557,14 @@
                             <label class="form-label">GST Number</label>
                             <input type="text" name="gst_number" class="form-control" value="{{ $client->gst_number }}">
                         </div>
-                        <div class="col-12 col-lg-6 d-flex align-items-end">
+                        <div class="col-12 col-lg-6 d-flex flex-column justify-content-end align-items-start">
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editActive{{ $client->id }}" {{ $client->is_active ? 'checked' : '' }}>
                                 <label class="form-check-label" for="editActive{{ $client->id }}">Active</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="khata_number_enabled" value="1" id="editKhataNumberEnabled{{ $client->id }}" {{ $client->khata_number_enabled ? 'checked' : '' }}>
+                                <label class="form-check-label" for="editKhataNumberEnabled{{ $client->id }}">Enable Khata Number</label>
                             </div>
                         </div>
                     </div>

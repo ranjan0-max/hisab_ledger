@@ -236,9 +236,11 @@
                 <div class="col-12 col-md-7">
                     <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                         <h3 class="supplier-ledger-name fw-bold text-dark mb-0">{{ $contact->name }}</h3>
-                        <span class="supplier-ledger-khata">
-                            Khata #{{ $contact->khata_number }}
-                        </span>
+                        @if($contact->khata_number !== null)
+                            <span class="supplier-ledger-khata">
+                                Khata #{{ $contact->khata_number }}
+                            </span>
+                        @endif
                     </div>
                     <div class="supplier-ledger-meta">
                         <span class="supplier-ledger-meta-item"><i class="bi bi-telephone me-1"></i> {{ $contact->phoneNumbers->first()->phone_number ?? 'No Phone' }}</span>

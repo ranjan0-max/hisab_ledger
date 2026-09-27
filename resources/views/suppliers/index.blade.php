@@ -203,7 +203,7 @@
                     <tbody>
                         @forelse($contacts as $contact)
                             <tr>
-                                <td class="fw-bold text-info">{{ $contact->khata_number }}</td>
+                                <td class="fw-bold text-info">{{ $contact->khata_number ?? '—' }}</td>
                                 <td class="fw-semibold">{{ $contact->name }}</td>
                                 <td>{{ $contact->phoneNumbers->first()->phone_number ?? '—' }}</td>
                                 <td>
@@ -250,7 +250,9 @@
                     <div class="d-flex justify-content-between align-items-start gap-3">
                         <div class="min-w-0">
                             <h5 class="supplier-card-name fw-bold mb-0 text-break">{{ $contact->name }}</h5>
-                            <div class="supplier-khata">Khata #{{ $contact->khata_number }}</div>
+                            @if($contact->khata_number !== null)
+                                <div class="supplier-khata">Khata #{{ $contact->khata_number }}</div>
+                            @endif
                         </div>
                         <div class="supplier-balance">
                             @if($contact->current_balance < 0)
@@ -294,7 +296,7 @@
 </div>
 
 <!-- Add Modal -->
-<div class="modal fade" id="addPartyModal" tabindex="-1">
+<div class="modal fade" id="addPartyModal" tabindex="-1" data-khata-enabled="{{ auth()->user()->isSuperAdmin() ? '' : (auth()->user()->client?->khata_number_enabled ? '1' : '0') }}">
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST" action="{{ route('suppliers.store') }}">
@@ -308,10 +310,10 @@
                     @if(auth()->user()->isSuperAdmin())
                         <div class="mb-3">
                             <label class="form-label">Client / Shop *</label>
-                            <select name="client_id" class="form-select" required>
+                            <select name="client_id" class="form-select" data-client-select required>
                                 <option value="">-- Select Client / Shop --</option>
                                 @foreach(\App\Models\Client::where('is_active', true)->get() as $client)
-                                    <option value="{{ $client->id }}">{{ $client->name }}</option>
+                                    <option value="{{ $client->id }}" data-khata-enabled="{{ $client->khata_number_enabled ? '1' : '0' }}">{{ $client->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -320,9 +322,9 @@
                         <label class="form-label">Supplier Name *</label>
                         <input type="text" name="name" class="form-control" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3 {{ auth()->user()->isSuperAdmin() || !auth()->user()->client?->khata_number_enabled ? 'd-none' : '' }}" data-khata-field>
                         <label class="form-label">Khata Number *</label>
-                        <input type="number" name="khata_number" class="form-control" min="1" step="1" inputmode="numeric" required>
+                        <input type="number" name="khata_number" class="form-control" min="1" step="1" inputmode="numeric" data-khata-input>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Phone Number</label>
@@ -368,10 +370,12 @@
                         <label class="form-label">Supplier Name *</label>
                         <input type="text" name="name" class="form-control" value="{{ $contact->name }}" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Khata Number *</label>
-                        <input type="number" name="khata_number" class="form-control" value="{{ $contact->khata_number }}" min="1" step="1" inputmode="numeric" required>
-                    </div>
+                    @if($contact->client?->khata_number_enabled)
+                        <div class="mb-3">
+                            <label class="form-label">Khata Number *</label>
+                            <input type="number" name="khata_number" class="form-control" value="{{ $contact->khata_number }}" min="1" step="1" inputmode="numeric" required>
+                        </div>
+                    @endif
                     <div class="mb-3">
                         <label class="form-label">Phone Number</label>
                         <input type="text" name="phone_number" class="form-control" value="{{ $contact->phoneNumbers->first()->phone_number ?? '' }}">
@@ -394,4 +398,29 @@
     </div>
 </div>
 @endforeach
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const addSupplierModal = document.getElementById('addPartyModal');
+        if (!addSupplierModal) return;
+
+        const clientSelect = addSupplierModal.querySelector('[data-client-select]');
+        const khataField = addSupplierModal.querySelector('[data-khata-field]');
+        const khataInput = addSupplierModal.querySelector('[data-khata-input]');
+
+        function syncKhataField() {
+            const clientSelected = !clientSelect || Boolean(clientSelect.value);
+            const khataEnabled = clientSelect
+                ? clientSelect.selectedOptions[0]?.dataset.khataEnabled === '1'
+                : addSupplierModal.dataset.khataEnabled === '1';
+            const showField = clientSelected && khataEnabled;
+
+            khataField.classList.toggle('d-none', !showField);
+            khataInput.disabled = !showField;
+            khataInput.required = showField;
+        }
+
+        clientSelect?.addEventListener('change', syncKhataField);
+        syncKhataField();
+    });
+</script>
 @endsection

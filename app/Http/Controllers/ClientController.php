@@ -37,12 +37,14 @@ class ClientController extends Controller
             'gst_number'              => ['nullable', 'string', 'max:30'],
             'notes'                   => ['nullable', 'string'],
             'is_active'               => ['boolean'],
+            'khata_number_enabled'    => ['boolean'],
             'menu_labels'             => ['nullable', 'array'],
             'session_timeout_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
             'renewal_month'           => [$user->isSuperAdmin() ? 'required' : 'nullable', 'integer', 'between:1,12'],
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['khata_number_enabled'] = $request->boolean('khata_number_enabled');
         // Only SuperAdmin can set session timeout (default 120 if not provided)
         $validated['session_timeout_minutes'] = $request->input('session_timeout_minutes', 120);
 
@@ -79,6 +81,7 @@ class ClientController extends Controller
             'gst_number'              => ['nullable', 'string', 'max:30'],
             'notes'                   => ['nullable', 'string'],
             'is_active'               => ['boolean'],
+            'khata_number_enabled'    => ['boolean'],
             'menu_keys'               => ['nullable', 'array'],
             'menu_values'             => ['nullable', 'array'],
             'session_timeout_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
@@ -86,6 +89,7 @@ class ClientController extends Controller
         ]);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['khata_number_enabled'] = $request->boolean('khata_number_enabled');
         // Only SuperAdmin can change session timeout
         $validated['session_timeout_minutes'] = $request->input('session_timeout_minutes', $client->session_timeout_minutes ?? 120);
 
