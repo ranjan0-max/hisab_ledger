@@ -9,15 +9,62 @@ class DailyEntryController extends Controller
 {
     public function index(Request $request)
     {
-        $user = auth()->user();
-        $query = DailyEntry::with(['createdBy', 'payments'])->where('daily_entries.status', 'POSTED');
+        $query = $this->dailyEntriesQuery(
+            DailyEntry::with(['createdBy', 'payments']),
+            $request->get('payment_status'),
+            $request->get('search')
+        );
 
-        if ($request->filled('payment_status')) {
-            $query->where('payment_status', $request->payment_status);
+        $entries = $query->latest('entry_date')->latest('id')->paginate(10)->withQueryString();
+
+        return view('daily.index', compact('entries'));
+    }
+
+    /**
+     * Create a signed, 7-day share link to the public daily entries report with the current filters.
+     */
+    public function shareLink(Request $request)
+    {
+        return $this->shareLinkResponse('daily.shared', [
+            'client' => $this->shareClientId(),
+            'payment_status' => $request->get('payment_status'),
+            'search' => $request->get('search'),
+        ]);
+    }
+
+    /**
+     * Public daily entries report opened from a share link (no login; the signed route guards it).
+     */
+    public function shared(Request $request)
+    {
+        // The signature fixes the client and filters, so skip the viewer's tenant scope
+        $query = DailyEntry::withoutGlobalScopes()
+            ->when($request->get('client'), fn($q, $clientId) => $q->where('daily_entries.client_id', $clientId));
+
+        // 500 rows per page so the phone browser can preview/save the PDF quickly
+        $entries = $this->dailyEntriesQuery($query, $request->get('payment_status'), $request->get('search'))
+            ->latest('entry_date')
+            ->latest('id')
+            ->paginate(500)
+            ->withQueryString();
+
+        $client = $request->get('client') ? \App\Models\Client::find($request->get('client')) : null;
+
+        return view('reports.daily_shared', compact('entries', 'client'));
+    }
+
+    /**
+     * Posted daily entries with the screen's filters; used by the list screen and the shared report.
+     */
+    private function dailyEntriesQuery($query, ?string $paymentStatus, ?string $search)
+    {
+        $query->where('daily_entries.status', 'POSTED');
+
+        if (trim((string) $paymentStatus) !== '') {
+            $query->where('payment_status', $paymentStatus);
         }
 
-        if ($request->filled('search')) {
-            $search = $request->search;
+        if (trim((string) $search) !== '') {
             $query->where(function($q) use ($search) {
                 $q->where('customer_name', 'like', "%{$search}%")
                   ->orWhere('mobile_number', 'like', "%{$search}%")
@@ -25,16 +72,7 @@ class DailyEntryController extends Controller
             });
         }
 
-        // Check if PDF export is requested
-        if ($request->get('export') === 'pdf') {
-            $exportEntries = $query->latest('entry_date')->latest('id')->get();
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.daily_list', compact('exportEntries'));
-            return $pdf->download("Daily_Entries_Report_" . date('Y-m-d') . ".pdf");
-        }
-
-        $entries = $query->latest('entry_date')->latest('id')->paginate(10)->withQueryString();
-
-        return view('daily.index', compact('entries'));
+        return $query;
     }
 
     public function store(Request $request)

@@ -9,7 +9,6 @@ use App\Models\LedgerTransaction;
 use App\Services\LedgerService;
 use App\Services\KhataNumberService;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class ContactController extends Controller
 {
@@ -63,60 +62,13 @@ class ContactController extends Controller
 
     private function index(Request $request, string $type)
     {
-        $user = auth()->user();
-        $query = Contact::with(['phoneNumbers', 'client'])->where('contacts.type', $type);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('contacts.name', 'like', "%{$search}%")
-                    ->when(ctype_digit(trim($search)), function ($searchQuery) use ($search) {
-                        $searchQuery->orWhere('contacts.khata_number', (int) $search);
-                    });
-            });
-        }
-
-        $inactiveMonths = $request->get('inactive_months');
-        $hideZeroBalance = $type === 'REGULAR_CUSTOMER'
-            && $request->get('balance_filter') === 'non_zero';
-
-        // Check if PDF Export is requested
-        if ($request->get('export') === 'pdf') {
-            $exportQuery = (clone $query)->withCurrentBalance();
-            if ($hideZeroBalance) {
-                $exportQuery->having('current_balance', '!=', 0);
-            }
-            if ($inactiveMonths) {
-                $cutoffDate = \Carbon\Carbon::now()->subMonths((int) $inactiveMonths)->format('Y-m-d');
-                $exportQuery->having('current_balance', '>', 0)
-                    ->whereDoesntHave('transactions', function ($tq) use ($cutoffDate) {
-                        $tq->where('status', 'POSTED')
-                            ->where('transaction_date', '>=', $cutoffDate);
-                    });
-            }
-            $exportContacts = $exportQuery
-                ->orderBy('contacts.khata_number')
-                ->get();
-
-            $pdf = Pdf::loadView('reports.customers_list', compact('exportContacts', 'type', 'inactiveMonths'));
-            $fileName = ($type === 'REGULAR_CUSTOMER' ? "Customers_List_" : "Suppliers_List_") . date('Y-m-d') . ".pdf";
-            return $pdf->download($fileName);
-        }
-
-        $query->withCurrentBalance();
-
-        if ($hideZeroBalance) {
-            $query->having('current_balance', '!=', 0);
-        }
-
-        if ($inactiveMonths) {
-            $cutoffDate = \Carbon\Carbon::now()->subMonths((int) $inactiveMonths)->format('Y-m-d');
-            $query->having('current_balance', '>', 0)
-                ->whereDoesntHave('transactions', function ($tq) use ($cutoffDate) {
-                    $tq->where('status', 'POSTED')
-                        ->where('transaction_date', '>=', $cutoffDate);
-                });
-        }
+        $query = $this->contactListQuery(
+            Contact::with(['phoneNumbers', 'client'])->where('contacts.type', $type),
+            $type,
+            $request->get('search'),
+            $request->get('inactive_months'),
+            $request->get('balance_filter')
+        );
 
         $contacts = $query
             ->orderBy('contacts.khata_number')
@@ -371,24 +323,137 @@ class ContactController extends Controller
         }
     }
 
-    public function statementPdf(Request $request, Contact $contact)
+    /**
+     * Apply the customers/suppliers list filters (search, inactive months, non-zero balance) with current balance.
+     * Used by the list screen and the shared list page so both show the same rows.
+     */
+    private function contactListQuery($query, string $type, ?string $search, $inactiveMonths, ?string $balanceFilter)
+    {
+        if (trim((string) $search) !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('contacts.name', 'like', "%{$search}%")
+                    ->when(ctype_digit(trim($search)), function ($searchQuery) use ($search) {
+                        $searchQuery->orWhere('contacts.khata_number', (int) $search);
+                    });
+            });
+        }
+
+        $query->withCurrentBalance();
+
+        if ($type === 'REGULAR_CUSTOMER' && $balanceFilter === 'non_zero') {
+            $query->having('current_balance', '!=', 0);
+        }
+
+        if ($inactiveMonths) {
+            $cutoffDate = \Carbon\Carbon::now()->subMonths((int) $inactiveMonths)->format('Y-m-d');
+            $query->having('current_balance', '>', 0)
+                ->whereDoesntHave('transactions', function ($tq) use ($cutoffDate) {
+                    $tq->withoutGlobalScope(\App\Scopes\TenantScope::class)
+                        ->where('status', 'POSTED')
+                        ->where('transaction_date', '>=', $cutoffDate);
+                });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Create a signed, 7-day share link to the public statement page.
+     */
+    public function statementShareLink(Request $request, Contact $contact)
+    {
+        $this->authorizeStatement($contact);
+
+        return $this->shareLinkResponse('statement.shared', [
+            'contact' => $contact->id,
+            'from_date' => $request->get('from_date'),
+            'to_date' => $request->get('to_date'),
+        ]);
+    }
+
+    public function customersShareLink(Request $request)
+    {
+        return $this->listShareLink($request, 'customers');
+    }
+
+    public function suppliersShareLink(Request $request)
+    {
+        return $this->listShareLink($request, 'suppliers');
+    }
+
+    /**
+     * Create a signed, 7-day share link to the public customers/suppliers list with the current filters.
+     */
+    private function listShareLink(Request $request, string $listType)
+    {
+        return $this->shareLinkResponse('contacts.shared', [
+            'listType' => $listType,
+            'client' => $this->shareClientId(),
+            'search' => $request->get('search'),
+            'inactive_months' => $request->get('inactive_months'),
+            'balance_filter' => $listType === 'customers' ? $request->get('balance_filter') : null,
+        ]);
+    }
+
+    /**
+     * Public customers/suppliers list opened from a share link (no login; the signed route guards it).
+     */
+    public function sharedList(Request $request, string $listType)
+    {
+        $type = $listType === 'customers' ? 'REGULAR_CUSTOMER' : 'SUPPLIER';
+
+        // The signature fixes the client and filters, so skip the viewer's tenant scope
+        $query = Contact::withoutGlobalScopes()
+            ->with(['phoneNumbers', 'client'])
+            ->where('contacts.type', $type)
+            ->when($request->get('client'), fn($q, $clientId) => $q->where('contacts.client_id', $clientId));
+
+        // 500 rows per page so the phone browser can preview/save the PDF quickly
+        $contacts = $this->contactListQuery($query, $type, $request->get('search'), $request->get('inactive_months'), $request->get('balance_filter'))
+            ->orderBy('contacts.khata_number')
+            ->paginate(500)
+            ->withQueryString();
+
+        $client = $request->get('client') ? \App\Models\Client::find($request->get('client')) : null;
+        $inactiveMonths = $request->get('inactive_months');
+
+        return view('reports.contacts_shared', compact('contacts', 'type', 'client', 'inactiveMonths'));
+    }
+
+    /**
+     * Public statement page opened from a share link (no login; the signed route guards it).
+     */
+    public function sharedStatement(Request $request, int $contact)
+    {
+        // The signature already proves which contact this link was made for, so skip the tenant scope
+        $contact = Contact::withoutGlobalScopes()->with(['client', 'phoneNumbers'])->findOrFail($contact);
+
+        // 500 entries per page so the phone browser can preview/save the PDF quickly
+        return view('reports.statement_shared', $this->statementData($contact, $request->get('from_date'), $request->get('to_date'), 500));
+    }
+
+    private function authorizeStatement(Contact $contact): void
     {
         $user = auth()->user();
         if (!$user->isSuperAdmin() && $contact->client_id !== $user->client_id) {
             abort(403);
         }
+    }
 
-        $fromDate = $request->get('from_date');
-        $toDate = $request->get('to_date');
+    private function statementData(Contact $contact, ?string $fromDate, ?string $toDate, ?int $perPage = null): array
+    {
+        // Caller has already authorized the contact; entries must follow the contact, not the viewer's tenant
+        $entries = fn() => $contact->transactions()->withoutGlobalScope(\App\Scopes\TenantScope::class);
 
         // Opening balance base
         $openingBalance = $contact->opening_balance_type === 'ADVANCE'
             ? -(float) $contact->opening_balance
             : (float) $contact->opening_balance;
+        $baseOpeningBalance = $openingBalance;
 
         // Prior period sum (before fromDate) — only if date filter set
         if ($fromDate) {
-            $priorQuery = $contact->transactions()->where('status', 'POSTED')->where('transaction_date', '<', $fromDate);
+            $priorQuery = $entries()->where('status', 'POSTED')->where('transaction_date', '<', $fromDate);
             if ($contact->type === 'REGULAR_CUSTOMER') {
                 $priorSum = $priorQuery->selectRaw("SUM(CASE WHEN transaction_type IN ('SALE','CASH_GIVEN','ADJUSTMENT') THEN amount WHEN transaction_type = 'CUSTOMER_PAYMENT' THEN -amount ELSE 0 END) as total")->value('total') ?? 0;
             } else {
@@ -398,37 +463,31 @@ class ContactController extends Controller
         }
 
         // Plain transactions fetch — no running_balance loop needed
-        $transactions = $contact->transactions()
+        $transactions = $entries()
             ->where('status', 'POSTED')
             ->when($fromDate, fn($q) => $q->where('transaction_date', '>=', $fromDate))
             ->when($toDate, fn($q) => $q->where('transaction_date', '<=', $toDate))
             ->orderBy('transaction_date', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
+            ->orderBy('id', 'asc');
+        $transactions = $perPage
+            ? $transactions->paginate($perPage)->withQueryString()
+            : $transactions->get();
 
-        // Current balance via single SQL aggregate — no PHP loop at all
+        // Current balance: opening + ALL posted entries (incl. future-dated), ignoring the date filter — same as the screen
         if ($contact->type === 'REGULAR_CUSTOMER') {
-            $rangeSum = $contact->transactions()
+            $txSum = $entries()
                 ->where('status', 'POSTED')
-                ->when($fromDate, fn($q) => $q->where('transaction_date', '>=', $fromDate))
-                ->when($toDate, fn($q) => $q->where('transaction_date', '<=', $toDate))
                 ->selectRaw("SUM(CASE WHEN transaction_type IN ('SALE','CASH_GIVEN','ADJUSTMENT') THEN amount WHEN transaction_type = 'CUSTOMER_PAYMENT' THEN -amount ELSE 0 END) as net")
                 ->value('net') ?? 0;
         } else {
-            $rangeSum = $contact->transactions()
+            $txSum = $entries()
                 ->where('status', 'POSTED')
-                ->when($fromDate, fn($q) => $q->where('transaction_date', '>=', $fromDate))
-                ->when($toDate, fn($q) => $q->where('transaction_date', '<=', $toDate))
                 ->selectRaw("SUM(CASE WHEN transaction_type IN ('PURCHASE','ADJUSTMENT') THEN amount WHEN transaction_type = 'SUPPLIER_PAYMENT' THEN -amount ELSE 0 END) as net")
                 ->value('net') ?? 0;
         }
 
-        $currentBalance = $openingBalance + (float) $rangeSum;
+        $currentBalance = $baseOpeningBalance + (float) $txSum;
 
-        $pdf = Pdf::loadView('reports.statement', compact('contact', 'transactions', 'fromDate', 'toDate', 'currentBalance', 'openingBalance'));
-
-        $khataSuffix = $contact->khata_number !== null ? "_{$contact->khata_number}" : '';
-
-        return $pdf->download("Statement_{$contact->name}{$khataSuffix}.pdf");
+        return compact('contact', 'transactions', 'fromDate', 'toDate', 'currentBalance', 'openingBalance');
     }
 }

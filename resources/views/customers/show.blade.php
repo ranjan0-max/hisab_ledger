@@ -274,8 +274,8 @@
                 </div>
                 <div class="col-12 col-md-5 text-md-end">
                     <div class="ledger-header-actions d-flex gap-2 justify-content-start justify-content-md-end">
-                        <button class="btn btn-sm ledger-pdf-button" data-bs-toggle="modal" data-bs-target="#downloadPdfModal">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF Statement
+                        <button class="btn btn-sm ledger-pdf-button" data-bs-toggle="modal" data-bs-target="#shareStatementModal">
+                            <i class="bi bi-share me-1"></i> Share Statement
                         </button>
                         @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('customers.manage'))
                             <button class="btn btn-sm ledger-add-button" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
@@ -417,9 +417,9 @@
                     <div class="mb-3">
                         <label class="form-label">Transaction Type *</label>
                         <select name="transaction_type" id="txTypeSelect" class="form-select" required onchange="togglePaymentMode()">
-                            <option value="SALE">SALE (Udhar / (+) Balance)</option>
-                            <option value="CASH_GIVEN">CASH GIVEN (Cash diya / (+) Balance)</option>
-                            <option value="CUSTOMER_PAYMENT">CUSTOMER PAYMENT (Jama / (-) Balance)</option>
+                            <option value="SALE">SALE (Udhar)</option>
+                            <option value="CASH_GIVEN">CASH GIVEN (Cash diya)</option>
+                            <option value="CUSTOMER_PAYMENT">CUSTOMER PAYMENT (Jama)</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -463,17 +463,17 @@ function togglePaymentMode() {
     }
 }
 </script>
-<!-- Download PDF Statement Modal with Date Filters -->
-<div class="modal fade" id="downloadPdfModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- Share Statement Modal with Date Filters -->
+<div class="modal fade share-link-modal" id="shareStatementModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="GET" action="{{ route('customers.statement.pdf', $contact->id) }}" target="_blank" onsubmit="setTimeout(() => { bootstrap.Modal.getInstance(document.getElementById('downloadPdfModal')).hide(); }, 300);">
+            <form onsubmit="return false;">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-pdf text-danger me-2"></i> Download Account Statement</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-share text-primary me-2"></i> Share Account Statement</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small mb-3">Select date range to filter statement entries or leave blank to download complete ledger statement.</p>
+                    <p class="text-muted small mb-3">Select date range to filter statement entries or leave blank to share the complete ledger statement. Anyone with the link can view it without logging in, until it expires.</p>
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label small fw-semibold">From Date</label>
@@ -484,10 +484,22 @@ function togglePaymentMode() {
                             <input type="date" name="to_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}">
                         </div>
                     </div>
+                    <div class="share-link-box mt-3 d-none" data-share-title="Account Statement - {{ $contact->name }}">
+                        <label class="form-label small fw-semibold">Share Link <span class="text-muted fw-normal share-link-expiry"></span></label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control share-link-input" readonly onclick="this.select()">
+                            <button type="button" class="btn btn-outline-primary" onclick="const box = this.closest('.share-link-box'); copyShareLinkText(box.querySelector('.share-link-input'), box.querySelector('.share-link-status'))"><i class="bi bi-clipboard me-1"></i> Copy</button>
+                        </div>
+                        <div class="small mt-1 share-link-status"></div>
+                        <div class="d-flex gap-2 mt-2 share-link-actions d-none">
+                            <a href="#" target="_blank" rel="noopener" class="btn btn-success btn-sm flex-fill share-link-whatsapp" onclick="const box = this.closest('.share-link-box'); copyShareLinkText(box.querySelector('.share-link-input'), box.querySelector('.share-link-status'))"><i class="bi bi-whatsapp me-1"></i> Share on WhatsApp</a>
+                            <a href="#" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm flex-fill share-link-open"><i class="bi bi-box-arrow-up-right me-1"></i> Open Link</a>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm btn-danger px-3"><i class="bi bi-download me-1"></i> Download PDF</button>
+                    <button type="button" class="btn btn-sm btn-primary px-3" onclick="copyStatementShareLink(this, '{{ route('customers.statement.share-link', $contact->id) }}')"><i class="bi bi-link-45deg me-1"></i> Create &amp; Copy Link</button>
                 </div>
             </form>
         </div>

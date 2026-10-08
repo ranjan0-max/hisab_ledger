@@ -22,6 +22,21 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+// Public statement page opened from a signed share link (expires after 7 days)
+Route::get('/statement/{contact}', [ContactController::class, 'sharedStatement'])
+    ->whereNumber('contact')
+    ->middleware('signed:page') // only the page number may change; dates/contact/expiry stay locked
+    ->name('statement.shared');
+
+// Public customers/suppliers list and daily entries report opened from signed share links
+Route::get('/shared/{listType}', [ContactController::class, 'sharedList'])
+    ->whereIn('listType', ['customers', 'suppliers'])
+    ->middleware('signed:page')
+    ->name('contacts.shared');
+Route::get('/shared/daily-entries', [DailyEntryController::class, 'shared'])
+    ->middleware('signed:page')
+    ->name('daily.shared');
+
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/khata-numbers/available', [ContactController::class, 'availableKhataNumbers'])
@@ -70,8 +85,9 @@ Route::middleware(['auth'])->group(function () {
     // Customers Routes
     Route::middleware(['permission:customers.view'])->group(function () {
         Route::get('/customers', [ContactController::class, 'customers'])->name('customers.index');
+        Route::get('/customers/share-link', [ContactController::class, 'customersShareLink'])->name('customers.share-link');
         Route::get('/customers/{contact}', [ContactController::class, 'show'])->name('customers.show');
-        Route::get('/customers/{contact}/statement/pdf', [ContactController::class, 'statementPdf'])->name('customers.statement.pdf');
+        Route::get('/customers/{contact}/statement/share-link', [ContactController::class, 'statementShareLink'])->name('customers.statement.share-link');
     });
     Route::middleware(['permission:customers.manage'])->group(function () {
         Route::post('/customers', [ContactController::class, 'store'])->name('customers.store');
@@ -81,8 +97,9 @@ Route::middleware(['auth'])->group(function () {
     // Suppliers Routes
     Route::middleware(['permission:suppliers.view'])->group(function () {
         Route::get('/suppliers', [ContactController::class, 'suppliers'])->name('suppliers.index');
+        Route::get('/suppliers/share-link', [ContactController::class, 'suppliersShareLink'])->name('suppliers.share-link');
         Route::get('/suppliers/{contact}', [ContactController::class, 'show'])->name('suppliers.show');
-        Route::get('/suppliers/{contact}/statement/pdf', [ContactController::class, 'statementPdf'])->name('suppliers.statement.pdf');
+        Route::get('/suppliers/{contact}/statement/share-link', [ContactController::class, 'statementShareLink'])->name('suppliers.statement.share-link');
     });
     Route::middleware(['permission:suppliers.manage'])->group(function () {
         Route::post('/suppliers', [ContactController::class, 'store'])->name('suppliers.store');
@@ -98,6 +115,7 @@ Route::middleware(['auth'])->group(function () {
     // Daily Entries Routes
     Route::middleware(['permission:daily.view'])->group(function () {
         Route::get('/daily', [DailyEntryController::class, 'index'])->name('daily.index');
+        Route::get('/daily/share-link', [DailyEntryController::class, 'shareLink'])->name('daily.share-link');
     });
     Route::middleware(['permission:daily.manage'])->group(function () {
         Route::post('/daily', [DailyEntryController::class, 'store'])->name('daily.store');

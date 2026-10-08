@@ -153,8 +153,8 @@
             <h3 class="fw-bold text-dark mb-0">Suppliers</h3>
         </div>
         <div class="d-flex gap-2 justify-content-start justify-content-sm-end">
-            <button class="btn btn-sm btn-outline-danger" id="supplierPdfExportBtn" onclick="handlePdfExport(this, '{{ route('suppliers.index', array_merge(request()->all(), ['export' => 'pdf'])) }}')">
-                <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+            <button class="btn btn-sm btn-outline-danger" id="supplierPdfExportBtn" onclick="openShareLinkModal(this, '{{ route('suppliers.share-link', request()->only(['search', 'inactive_months'])) }}', 'Suppliers List')">
+                <i class="bi bi-share me-1"></i> Share Link
             </button>
             @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('suppliers.manage'))
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPartyModal">

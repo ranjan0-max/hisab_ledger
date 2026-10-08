@@ -309,6 +309,38 @@
                 background-color: #cbd5e1;
                 border-radius: 2px;
             }
+            /* Share link modals: bottom sheet sized to content, header/footer fixed, body scrolls */
+            .share-link-modal .modal-dialog {
+                height: auto !important;
+                max-height: 92dvh !important;
+            }
+            .share-link-modal .modal-content {
+                max-height: 92dvh !important;
+                overflow: hidden !important;
+            }
+            .share-link-modal .modal-body {
+                touch-action: pan-y;
+            }
+        }
+        /* Share link modals: keep header/footer fixed and scroll only the body (also when wrapped in a <form>) */
+        .share-link-modal .modal-content > form {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            max-height: 100%;
+            overflow: hidden;
+        }
+        .share-link-modal .modal-header,
+        .share-link-modal .modal-footer {
+            flex: 0 0 auto;
+        }
+        .share-link-modal .modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
         }
         @keyframes slideUpBottom {
             from {
@@ -680,6 +712,36 @@
         </div>
     @endisset
 
+    <!-- Share Link Modal (customers, suppliers, daily entries) -->
+    <div class="modal fade share-link-modal" id="shareLinkModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-share text-primary me-2"></i> Share Link</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Anyone with this link can view this list (with the current filters) without logging in, until it expires.</p>
+                    <div class="share-link-box d-none">
+                        <label class="form-label small fw-semibold">Share Link <span class="text-muted fw-normal share-link-expiry"></span></label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control share-link-input" readonly onclick="this.select()">
+                            <button type="button" class="btn btn-outline-primary" onclick="const box = this.closest('.share-link-box'); copyShareLinkText(box.querySelector('.share-link-input'), box.querySelector('.share-link-status'))"><i class="bi bi-clipboard me-1"></i> Copy</button>
+                        </div>
+                        <div class="small mt-1 share-link-status"></div>
+                        <div class="d-flex gap-2 mt-2 share-link-actions d-none">
+                            <a href="#" target="_blank" rel="noopener" class="btn btn-success btn-sm flex-fill share-link-whatsapp" onclick="const box = this.closest('.share-link-box'); copyShareLinkText(box.querySelector('.share-link-input'), box.querySelector('.share-link-status'))"><i class="bi bi-whatsapp me-1"></i> Share on WhatsApp</a>
+                            <a href="#" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm flex-fill share-link-open"><i class="bi bi-box-arrow-up-right me-1"></i> Open Link</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -729,33 +791,76 @@
             }, 4000);
         };
 
-        // Global Helper for Export PDF button disabling & progress status
-        window.handlePdfExport = function(btnElement, exportUrl) {
-            if (btnElement.disabled) return;
+        // Copy text to the clipboard; navigator.clipboard needs HTTPS or localhost, so fall back to selecting the input
+        window.copyShareLinkText = async function(input, status) {
+            let copied = false;
+            try {
+                await navigator.clipboard.writeText(input.value);
+                copied = true;
+            } catch (e) {
+                input.select();
+                try { copied = document.execCommand('copy'); } catch (err) { copied = false; }
+            }
+            status.className = `small mt-1 share-link-status ${copied ? 'text-success' : 'text-muted'}`;
+            status.textContent = copied ? 'Link copied. Paste it in WhatsApp or anywhere to share.' : 'Select the link above and copy it manually.';
+        };
 
-            // Store original content
+        // Create a 7-day share link and show it in the given box (.share-link-input/.share-link-expiry/.share-link-status)
+        window.createShareLink = async function(btnElement, shareLinkUrl, box) {
+            if (btnElement.disabled) return;
+            const input = box.querySelector('.share-link-input');
+            const status = box.querySelector('.share-link-status');
+            const actions = box.querySelector('.share-link-actions');
             const originalHtml = btnElement.innerHTML;
 
-            // Disable button and show spinner
             btnElement.disabled = true;
-            btnElement.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Exporting...`;
+            btnElement.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Creating...`;
+            input.value = '';
+            status.textContent = '';
+            actions.classList.add('d-none');
+            box.classList.remove('d-none');
 
-            if (window.showSnackbar) {
-                window.showSnackbar('PDF Generation started in background. Download will start shortly...', 'success');
-            }
+            try {
+                const response = await fetch(shareLinkUrl, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) throw new Error('Request failed');
+                const data = await response.json();
 
-            // Trigger file download
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = exportUrl;
-            document.body.appendChild(iframe);
+                input.value = data.url;
+                box.querySelector('.share-link-expiry').textContent = `(valid till ${data.expires_on})`;
 
-            // Re-enable button after 5 seconds to prevent spamming
-            setTimeout(() => {
+                // wa.me opens the WhatsApp app on phones (WhatsApp Web on desktop) with the message ready to send
+                const message = [box.dataset.shareTitle, data.url].filter(Boolean).join('\n');
+                box.querySelector('.share-link-whatsapp').href = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                // Open Link: preview the shared page in a new browser tab
+                box.querySelector('.share-link-open').href = data.url;
+                actions.classList.remove('d-none');
+                await window.copyShareLinkText(input, status);
+            } catch (e) {
+                status.className = 'small mt-1 share-link-status text-danger';
+                status.textContent = 'Could not create the share link. Please try again.';
+            } finally {
                 btnElement.disabled = false;
                 btnElement.innerHTML = originalHtml;
-                setTimeout(() => iframe.remove(), 2000);
-            }, 5000);
+            }
+        };
+
+        // Statement modal: share link for the chosen date range
+        window.copyStatementShareLink = function(btnElement, shareLinkUrl) {
+            const form = btnElement.form;
+            const params = new URLSearchParams();
+            ['from_date', 'to_date'].forEach(name => {
+                if (form.elements[name].value) params.set(name, form.elements[name].value);
+            });
+            return window.createShareLink(btnElement, `${shareLinkUrl}?${params.toString()}`, form.querySelector('.share-link-box'));
+        };
+
+        // List pages (customers, suppliers, daily entries): share link for the current filters, shown in the global modal
+        window.openShareLinkModal = function(btnElement, shareLinkUrl, shareTitle) {
+            const modalEl = document.getElementById('shareLinkModal');
+            const box = modalEl.querySelector('.share-link-box');
+            box.dataset.shareTitle = shareTitle || '';
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            return window.createShareLink(btnElement, shareLinkUrl, box);
         };
 
         // Automatic Session Expiry & Timeout Redirection Logic

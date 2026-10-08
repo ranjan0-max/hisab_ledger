@@ -288,8 +288,8 @@
             </div>
             <div class="d-flex gap-2 justify-content-start justify-content-sm-end">
                 <button class="btn btn-sm btn-outline-danger" id="customerPdfExportBtn"
-                    onclick="handlePdfExport(this, '{{ route('customers.index', array_merge(request()->all(), ['export' => 'pdf'])) }}')">
-                    <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                    onclick="openShareLinkModal(this, '{{ route('customers.share-link', request()->only(['search', 'inactive_months', 'balance_filter'])) }}', 'Customers List')">
+                    <i class="bi bi-share me-1"></i> Share Link
                 </button>
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('customers.manage'))
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPartyModal">

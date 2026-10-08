@@ -228,8 +228,8 @@
             <h3 class="fw-bold text-dark mb-0">Daily Entries</h3>
         </div>
         <div class="d-flex gap-2 justify-content-start justify-content-sm-end">
-            <button class="btn btn-sm btn-outline-danger" id="dailyPdfExportBtn" onclick="handlePdfExport(this, '{{ route('daily.index', array_merge(request()->all(), ['export' => 'pdf'])) }}')">
-                <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+            <button class="btn btn-sm btn-outline-danger" id="dailyPdfExportBtn" onclick="openShareLinkModal(this, '{{ route('daily.share-link', request()->only(['search', 'payment_status'])) }}', 'Daily Entries Report')">
+                <i class="bi bi-share me-1"></i> Share Link
             </button>
             @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('daily.manage'))
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addEntryModal">
